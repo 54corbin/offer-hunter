@@ -6617,53 +6617,101 @@
           education: [],
           skills: [],
           apiKey: "",
-          settings: { autoFillEnabled: true, aiRecommendationsEnabled: true }
+          settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: "" }
         });
       }
     });
   };
 
   // app/llmService.js
-  var getApiKey = async () => {
-    const profile = await getUserProfile();
-    return profile?.apiKey;
-  };
+  var OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
   var generateContent = async (prompt) => {
-    const apiKey = await getApiKey();
+    const profile = await getUserProfile();
+    const apiKey = profile?.apiKey;
     if (!apiKey) {
-      throw new Error("API key not found. Please set it in the extension settings.");
+      console.error("LLM API key not found.");
+      return null;
     }
-    const response = await fetch("https://api.example.com/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ prompt })
-    });
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+    try {
+      const response = await fetch(OPENAI_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7
+          // Higher temperature for more creative output
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("LLM API request failed:", errorData);
+        return null;
+      }
+      const data = await response.json();
+      return data.choices[0]?.message?.content || null;
+    } catch (error) {
+      console.error("Error calling LLM API:", error);
+      return null;
     }
-    const data = await response.json();
-    return data.generated_text;
   };
   var getRelevanceScore = async (profile, jobDetails) => {
-    const prompt = `As a recruiter, please analyze the following user profile and job description. Provide a relevance score from 1 to 100 and a brief summary of why the user is a good or bad fit.
-  
-  User Profile:
-  ${JSON.stringify(profile, null, 2)}
+    const apiKey = profile?.apiKey;
+    if (!apiKey) {
+      console.error("LLM API key not found.");
+      return null;
+    }
+    const prompt = `
+    You are a professional recruiter. Analyze the following user profile and job description, and return a relevance score from 1 to 100, where 100 is a perfect match. Also, provide a brief summary of why it is a match or not. Your response must be a JSON object with the keys "score" and "summary".
 
-  Job Description:
-  ${JSON.stringify(jobDetails, null, 2)}
+    User Profile:
+    ---
+    ${JSON.stringify(profile, null, 2)}
+    ---
 
-  Respond in the following JSON format:
-  {
-    "score": <number>,
-    "summary": "<string>"
-  }
+    Job Description:
+    ---
+    ${JSON.stringify(jobDetails, null, 2)}
+    ---
   `;
-    const response = await generateContent(prompt);
-    return JSON.parse(response);
+    try {
+      const response = await fetch(OPENAI_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("LLM API request failed:", errorData);
+        return null;
+      }
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+      if (content) {
+        try {
+          return JSON.parse(content);
+        } catch (e) {
+          console.error("Failed to parse LLM response JSON:", e);
+          return null;
+        }
+      } else {
+        console.error("LLM response did not contain content.");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error calling LLM API:", error);
+      return null;
+    }
   };
 
   // public/background.js

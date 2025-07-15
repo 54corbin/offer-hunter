@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import JobsPage from './jobs/page';
@@ -8,6 +8,8 @@ import HistoryPage from './history/page';
 import SettingsPage from './settings/page';
 import { generateContent } from './llmService';
 import { getUserProfile } from './storageService';
+import PasscodePage from './passcode/PasscodeComponent';
+import CryptoJS from 'crypto-js';
 
 const ProfilePage = dynamic(() => import('./profile/page'), { ssr: false });
 
@@ -15,6 +17,28 @@ const HomePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [coverLetter, setCoverLetter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [storedPasscodeHash, setStoredPasscodeHash] = useState(null);
+
+  useEffect(() => {
+    getUserProfile().then(profile => {
+      if (profile?.settings?.passcodeEnabled && profile?.settings?.passcodeHash) {
+        setIsLocked(true);
+        setStoredPasscodeHash(profile.settings.passcodeHash);
+      } else {
+        setIsLocked(false);
+      }
+    });
+  }, []);
+
+  const handleUnlock = (enteredPasscode) => {
+    const hashedEnteredPasscode = CryptoJS.SHA256(enteredPasscode).toString();
+    if (hashedEnteredPasscode === storedPasscodeHash) {
+      setIsLocked(false);
+    } else {
+      alert("Incorrect passcode.");
+    }
+  };
 
   const handleGenerateCoverLetter = async () => {
     const profile = await getUserProfile();
@@ -28,6 +52,10 @@ const HomePage = () => {
   };
 
   const renderContent = () => {
+    if (isLocked) {
+      return <PasscodePage onUnlock={handleUnlock} />;
+    }
+
     switch (activeTab) {
       case 'profile':
         return <ProfilePage />;

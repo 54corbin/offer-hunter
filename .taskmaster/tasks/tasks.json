@@ -300,11 +300,161 @@
         ],
         "status": "done",
         "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Enhance Resume Parsing with LLM for Profile Extraction",
+        "description": "Replace the existing heuristic-based resume parsing with an LLM-powered service to accurately extract structured user profile data from uploaded resumes. This will significantly improve the quality of auto-populated profiles.",
+        "details": "Modify the existing resume upload functionality from Task 4. After extracting the raw text from the PDF or DOCX file, send the text to the pre-configured LLM service. Develop a detailed prompt that instructs the LLM to act as an expert HR data extractor and return a JSON object that strictly adheres to the user profile schema defined in Task 2. The function handling the LLM API call should manage the request and parse the JSON response, with robust error handling for API failures or malformed data. On success, use the structured JSON to populate the Profile Management UI from Task 3 for user review. Ensure the LLM API key is handled securely per the practices in Task 19.",
+        "testStrategy": "Upload several sample resumes in both PDF and DOCX formats with varying layouts. Verify that the profile form is populated accurately with all data, including nested job experiences and education. Confirm the extracted data structure matches the schema from Task 2. Test with an empty or unparsable file and verify a user-friendly error is shown. Simulate an LLM API failure (e.g., invalid key) to confirm graceful error handling. Compare the quality of the LLM-extracted data against the previous method to confirm improvement.",
+        "status": "done",
+        "dependencies": [
+          2,
+          3,
+          4,
+          13,
+          19
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Develop the LLM Prompt for Profile Extraction",
+            "description": "Create a detailed and robust prompt for the LLM. The prompt must instruct the LLM to act as an expert HR data extractor and return a JSON object that strictly adheres to the user profile schema defined in Task 2.",
+            "dependencies": [],
+            "details": "The prompt engineering phase is critical. It involves iterating on prompt versions to handle various resume formats and edge cases. The prompt must explicitly define the desired JSON structure, data types, and rules for handling missing information (e.g., using null values or empty arrays). It should directly reference the schema from Task 2 to ensure consistency.",
+            "status": "done",
+            "testStrategy": "Test the prompt with at least 10 different sample resume texts (covering different formats, industries, and experience levels) using an LLM playground or a simple script. Validate that the output JSON is always well-formed and accurately reflects the input text according to the schema."
+          },
+          {
+            "id": 2,
+            "title": "Implement the LLM API Integration Service",
+            "description": "Develop a backend service or module responsible for communicating with the configured LLM API. This service will encapsulate the logic for sending the resume text and prompt, handling authentication securely, and receiving the raw response.",
+            "dependencies": [
+              1
+            ],
+            "details": "This service will contain a primary function that accepts raw resume text as input. It must securely retrieve the LLM API key following the practices from Task 19 (e.g., from a secrets manager or environment variables). It will then construct the API request payload, including the prompt from subtask 1 and the resume text, and send it to the LLM endpoint.",
+            "status": "done",
+            "testStrategy": "Unit test the service by mocking the LLM API. Verify that it correctly constructs the request payload, adds the necessary authentication headers, and correctly handles both successful (2xx) and error (4xx, 5xx) HTTP status codes from the mock API."
+          },
+          {
+            "id": 3,
+            "title": "Develop a Robust LLM Response Parser and Validator",
+            "description": "Create a component to parse the JSON response from the LLM API. This must include comprehensive error handling for API failures, network issues, and malformed or incomplete JSON data returned by the LLM.",
+            "dependencies": [
+              2
+            ],
+            "details": "The parser will attempt to decode the JSON string from the LLM's response. It must then validate the parsed object against the expected user profile schema (from Task 2). Implement retry logic with exponential backoff for transient API errors (e.g., 503 Service Unavailable). If parsing or validation fails, it should log the error and return a standardized error object to the calling function.",
+            "status": "done",
+            "testStrategy": "Unit test the parser with a variety of string inputs: a perfect JSON response, JSON with missing fields, a non-JSON string, an empty string, and null. Also, simulate various API error responses to ensure the error handling and retry logic are triggered correctly."
+          },
+          {
+            "id": 4,
+            "title": "Integrate LLM Service into the Resume Upload Workflow",
+            "description": "Modify the existing resume upload controller/handler (from Task 4) to replace the old heuristic parsing logic. The new workflow will orchestrate the text extraction and the call to the new LLM integration service.",
+            "dependencies": [
+              3
+            ],
+            "details": "Refactor the backend endpoint that handles file uploads. After the existing logic extracts raw text from the uploaded PDF or DOCX file, it will now pass this text to the LLM API Integration Service (Subtask 2). The endpoint must wait for the structured JSON response from the parser (Subtask 3) and pass this data back to the client upon success, or an error message upon failure.",
+            "status": "done",
+            "testStrategy": "Write an integration test for the upload endpoint. Upload a sample resume file and mock the LLM service (Subtasks 2 & 3) to return a predefined successful JSON object. Verify the endpoint returns a 200 status with the correct JSON payload. Then, mock an error state and verify the endpoint returns the appropriate error code and message."
+          },
+          {
+            "id": 5,
+            "title": "Populate Profile UI with Extracted Data for User Review",
+            "description": "On a successful response from the backend, use the structured JSON data to populate the fields in the Profile Management UI (from Task 3), allowing the user to review and edit the information.",
+            "dependencies": [
+              4
+            ],
+            "details": "The frontend component for the Profile Management UI will be updated to handle the JSON payload from the resume upload endpoint. A mapping function will be created to iterate through the received JSON and populate the corresponding form fields (e.g., personal info, work experience, education). The form should be rendered in a 'review' state, clearly indicating which data was auto-populated.",
+            "status": "done",
+            "testStrategy": "Conduct an end-to-end test. As a user, upload a resume. Verify that after processing, the profile page is displayed and all relevant fields (name, contact, experience, etc.) are correctly populated with the data extracted from the resume. Test with a resume that has missing sections to ensure the UI handles empty or null data gracefully."
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "Implement Passcode Lock for Extension Access",
+        "description": "Implement a passcode lock screen that appears whenever the user opens the extension popup after a configurable delay. This feature will enhance user privacy by protecting the sensitive profile and application data stored within the extension, while providing flexibility for the user.",
+        "status": "done",
+        "dependencies": [
+          1,
+          12,
+          17,
+          19
+        ],
+        "priority": "medium",
+        "details": "A new view for passcode entry needs to be created. When the popup opens, a script should check `chrome.storage.local` for an enabled passcode setting. If enabled, it should then check the time elapsed since the user was last active against a user-configurable delay. If the elapsed time exceeds the configured delay, the lock screen is shown instead of the main dashboard. The user will set their 4-digit passcode and the lock delay (e.g., 'Immediately', 'After 1 minute') in a new section on the Settings page. The passcode must be hashed (e.g., using SHA-256) before being stored. Upon successful entry, the main dashboard view is rendered and the last-active timestamp is updated. Incorrect attempts should display an error message.",
+        "testStrategy": "Navigate to the Settings page, set a 4-digit passcode, and configure a 1-minute delay. Close and reopen the popup within the minute to verify the dashboard appears directly. Wait for more than 1 minute, then reopen the popup to verify the lock screen is displayed. Enter the correct passcode to confirm access. Enter an incorrect passcode to verify access is denied. Use developer tools to inspect `chrome.storage.local` and confirm the passcode is a hash and the delay setting and last-active timestamp are stored correctly. Finally, disable the passcode feature and verify the popup opens directly to the dashboard.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Passcode & Delay Settings UI",
+            "description": "Develop the user interface for the passcode settings within the existing Settings page. This includes a toggle switch to enable/disable the feature, a 4-digit passcode input field, a confirmation field, a control to select the lock delay duration, and a save button.",
+            "status": "done",
+            "dependencies": [],
+            "details": "The new section should be added to the Settings view. Passcode inputs must be of type 'password'. Implement client-side validation for the 4-digit passcode. Add a delay control, such as a dropdown menu with options like 'Immediately', 'After 1 minute', 'After 5 minutes', and 'After 15 minutes'.",
+            "testStrategy": "Manually verify that the new UI components render correctly on the Settings page. Test the input validation for the passcode. Confirm that the 'Save' button is disabled if the passcode and confirmation fields do not match. Test selecting and saving different delay options."
+          },
+          {
+            "id": 2,
+            "title": "Implement Passcode & Delay Storage Logic",
+            "description": "Implement the backend logic for the passcode settings. This involves hashing the user's 4-digit passcode using SHA-256 and storing the hash, the enabled/disabled status, and the selected lock delay duration in `chrome.storage.local`.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate a library like `crypto-js` for SHA-256 hashing. When the user saves the settings, store the passcode hash, the enable toggle state, and the selected delay value under keys like `passcodeHash`, `isPasscodeEnabled`, and `lockDelay`.",
+            "testStrategy": "After saving a passcode and delay setting, use developer tools to inspect `chrome.storage.local`. Confirm that `isPasscodeEnabled` is set correctly, `passcodeHash` contains a non-plaintext hash, and `lockDelay` stores the selected delay value."
+          },
+          {
+            "id": 3,
+            "title": "Build the Passcode Lock Screen View",
+            "description": "Create a new, dedicated view component for the passcode lock screen. This view will be displayed when the extension popup is opened and the feature is enabled and the delay has passed.",
+            "status": "done",
+            "dependencies": [],
+            "details": "The view should feature a clear prompt (e.g., 'Enter Passcode'), a 4-digit input field (ideally styled as four separate input boxes or dots), a submit/unlock button, and a designated area to display error messages for incorrect attempts.",
+            "testStrategy": "Render the lock screen component in a storybook or isolated test environment. Verify all UI elements are present and correctly styled. Ensure the input mechanism is user-friendly and the error message area is initially hidden."
+          },
+          {
+            "id": 4,
+            "title": "Implement Conditional View Logic with Delay",
+            "description": "Modify the extension's main entry point to check for the passcode setting and the configured delay. Conditionally render the lock screen based on the time elapsed since the last user activity.",
+            "status": "done",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "In the main popup component's initialization logic, check if `isPasscodeEnabled` is true. If so, retrieve `lockDelay` and `lastActiveTime` from storage. Calculate the time elapsed since `lastActiveTime`. If the elapsed time exceeds `lockDelay` (or if the delay is 'Immediately'), show the lock screen. Otherwise, show the main dashboard and update `lastActiveTime` to the current time. A mechanism to record `lastActiveTime` when the popup closes or becomes inactive is required.",
+            "testStrategy": "Test with a 1-minute delay: open, close, and reopen within a minute to verify the dashboard loads directly. Then, wait over a minute and reopen to verify the lock screen appears. Test the 'Immediately' setting. Test disabling the feature entirely."
+          },
+          {
+            "id": 5,
+            "title": "Implement Passcode Verification and Timestamp Update",
+            "description": "Add the verification logic to the passcode lock screen. When the user submits a passcode, it should be hashed and compared against the stored hash to grant or deny access, and update the last active timestamp upon successful unlock.",
+            "status": "done",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "On the lock screen, when the user submits their entry, hash it using the same SHA-256 function. Compare it to the stored `passcodeHash`. If they match, render the main dashboard and update the `lastActiveTime` in `chrome.storage.local` to the current time. If they don't match, display an error message.\n<info added on 2025-07-15T05:01:55.145Z>\nUpon successful authentication, update the last active timestamp in `chrome.storage.local`.\n</info added on 2025-07-15T05:01:55.145Z>",
+            "testStrategy": "With the lock screen displayed, enter an incorrect passcode and verify an error message appears. Then, enter the correct passcode and verify the dashboard appears. After a successful unlock, inspect storage to confirm `lastActiveTime` has been updated."
+          },
+          {
+            "id": 6,
+            "title": "Implement Lockout Timer Management",
+            "description": "Implement the logic to track the last active time of the user and determine if the lockout period has expired. This involves adding a timestamp to `chrome.storage.local` whenever the user successfully authenticates or interacts with the extension.",
+            "details": "",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 24
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-06-29T06:19:55.208Z",
-      "updated": "2025-06-29T08:08:22.138Z",
+      "updated": "2025-07-15T05:02:01.015Z",
       "description": "Tasks for master context"
     }
   }

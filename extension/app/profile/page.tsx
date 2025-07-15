@@ -2,12 +2,22 @@
 
 import React, { useEffect, useState } from 'react';
 import { getUserProfile, saveUserProfile } from '../storageService';
+import { extractProfileFromResume } from '../llmService';
+
+const defaultProfile = {
+  personalInfo: { name: '', email: '', phone: '' },
+  experience: [],
+  education: [],
+  skills: [],
+};
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    getUserProfile().then(setProfile);
+    getUserProfile().then(storedProfile => {
+      setProfile(storedProfile || defaultProfile);
+    });
   }, []);
 
   const handleInputChange = (value, section, index, field) => {
@@ -17,7 +27,7 @@ const ProfilePage = () => {
       if (index !== null) {
         newProfile[section][index][field] = value;
       } else {
-        newProfile[section][field] = value;
+        newProfile[section] = { ...newProfile[section], [field]: value };
       }
     } else {
       newProfile[field] = value;
@@ -31,6 +41,8 @@ const ProfilePage = () => {
     const newProfile = { ...profile };
     newProfile[section].push({});
     setProfile(newProfile);
+    // Note: You might want to save only on remove or input change to avoid saving an empty object immediately.
+    saveUserProfile(newProfile);
   };
 
   const removeEntry = (section, index) => {
@@ -82,24 +94,12 @@ const ProfilePage = () => {
     }
   };
 
-  const parseResumeText = (text) => {
-    // This is a very basic heuristic parser. A more sophisticated NLP approach would be better.
-    const newProfile = { ...profile };
-    
-    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-    const phoneRegex = /(\d{3}[-.\s]??\d{3}[-.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-.\s]??\d{4}|\d{10})/;
-
-    const emailMatch = text.match(emailRegex);
-    if (emailMatch) newProfile.personalInfo.email = emailMatch[0];
-
-    const phoneMatch = text.match(phoneRegex);
-    if (phoneMatch) newProfile.personalInfo.phone = phoneMatch[0];
-    
-    // Simple name extraction (assuming first line is the name)
-    newProfile.personalInfo.name = text.split('\n')[0].trim();
-
-    setProfile(newProfile);
-    saveUserProfile(newProfile);
+  const parseResumeText = async (text) => {
+    const extractedProfile = await extractProfileFromResume(text);
+    if (extractedProfile) {
+      setProfile(extractedProfile);
+      saveUserProfile(extractedProfile);
+    }
   };
 
   if (!profile) {
@@ -120,37 +120,37 @@ const ProfilePage = () => {
         <input
           type="text"
           placeholder="Name"
-          value={profile.personalInfo.name}
+          value={profile.personalInfo?.name || ''}
           onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'name')}
         />
         <input
           type="email"
           placeholder="Email"
-          value={profile.personalInfo.email}
+          value={profile.personalInfo?.email || ''}
           onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'email')}
         />
         <input
           type="tel"
           placeholder="Phone"
-          value={profile.personalInfo.phone}
+          value={profile.personalInfo?.phone || ''}
           onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'phone')}
         />
       </section>
 
       <section>
         <h3>Work Experience</h3>
-        {profile.experience.map((exp, index) => (
+        {profile.experience?.map((exp, index) => (
           <div key={index}>
             <input
               type="text"
               placeholder="Company"
-              value={exp.company}
+              value={exp.company || ''}
               onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'company')}
             />
             <input
               type="text"
               placeholder="Title"
-              value={exp.title}
+              value={exp.title || ''}
               onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'title')}
             />
             <button onClick={() => removeEntry('experience', index)}>Remove</button>
@@ -161,18 +161,18 @@ const ProfilePage = () => {
 
       <section>
         <h3>Education</h3>
-        {profile.education.map((edu, index) => (
+        {profile.education?.map((edu, index) => (
           <div key={index}>
             <input
               type="text"
               placeholder="Institution"
-              value={edu.institution}
+              value={edu.institution || ''}
               onChange={(e) => handleInputChange(e.target.value, 'education', index, 'institution')}
             />
             <input
               type="text"
               placeholder="Degree"
-              value={edu.degree}
+              value={edu.degree || ''}
               onChange={(e) => handleInputChange(e.target.value, 'education', index, 'degree')}
             />
             <button onClick={() => removeEntry('education', index)}>Remove</button>
@@ -185,7 +185,7 @@ const ProfilePage = () => {
         <h3>Skills</h3>
         <textarea
           placeholder="Skills (comma-separated)"
-          value={profile.skills.join(', ')}
+          value={profile.skills?.join(', ') || ''}
           onChange={(e) => handleInputChange(e.target.value.split(',').map(s => s.trim()), null, null, 'skills')}
         />
       </section>
@@ -194,3 +194,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+

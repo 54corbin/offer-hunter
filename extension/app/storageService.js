@@ -33,7 +33,7 @@ const ENCRYPTION_KEY = 'your-super-secret-key'; // In a real app, this should be
  * @property {Education[]} education
  * @property {string[]} skills
  * @property {string} apiKey
- * @property {{ autoFillEnabled: boolean, aiRecommendationsEnabled: boolean }} settings
+ * @property {{ autoFillEnabled: boolean, aiRecommendationsEnabled: boolean, passcodeEnabled: boolean, passcodeHash?: string }} settings
  */
 
 const encryptData = (data) => {
@@ -72,7 +72,7 @@ export const getUserProfile = () => {
         education: [],
         skills: [],
         apiKey: "",
-        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true },
+        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: '' },
       });
     }
   });
@@ -86,9 +86,15 @@ export const getUserProfile = () => {
 export const saveUserProfile = (data) => {
   return new Promise((resolve) => {
     if (chrome && chrome.storage && chrome.storage.local) {
+      const profileToSave = { ...data };
+      if (profileToSave.settings?.passcodeEnabled && profileToSave.settings.passcode) {
+        profileToSave.settings.passcodeHash = CryptoJS.SHA256(profileToSave.settings.passcode).toString();
+        delete profileToSave.settings.passcode; // Don't store plaintext passcode
+      }
+
       const encryptedProfile = {
-        ...data,
-        apiKey: data.apiKey ? encryptData(data.apiKey) : ''
+        ...profileToSave,
+        apiKey: profileToSave.apiKey ? encryptData(profileToSave.apiKey) : ''
       };
       chrome.storage.local.set({ userProfile: encryptedProfile }, () => {
         resolve();
