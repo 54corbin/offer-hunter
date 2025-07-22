@@ -11,6 +11,7 @@ const SettingsPage = () => {
   const [passcode, setPasscode] = useState("");
   const [confirmPasscode, setConfirmPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState("");
+  const [lockoutDelay, setLockoutDelay] = useState(0); // 0 for immediate
 
   useEffect(() => {
     getUserProfile().then(profile => {
@@ -19,35 +20,54 @@ const SettingsPage = () => {
         setAutoFillEnabled(profile.settings?.autoFillEnabled ?? true);
         setAiRecommendationsEnabled(profile.settings?.aiRecommendationsEnabled ?? true);
         setPasscodeEnabled(profile.settings?.passcodeEnabled ?? false);
+        setLockoutDelay(profile.settings?.lockoutDelay ?? 0);
       }
     });
   }, []);
 
   const handleSave = () => {
-    if (passcodeEnabled) {
-      if (passcode.length !== 4 || confirmPasscode.length !== 4) {
-        setPasscodeError("Passcode must be 4 digits.");
-        return;
-      }
-      if (passcode !== confirmPasscode) {
-        setPasscodeError("Passcodes do not match.");
-        return;
-      }
-    }
-
     getUserProfile().then(profile => {
+      let newPasscode;
+      if (passcodeEnabled) {
+        // Only validate and update passcode if a new one is entered
+        if (passcode || confirmPasscode) {
+          if (passcode.length !== 4 || confirmPasscode.length !== 4) {
+            setPasscodeError("Passcode must be 4 digits.");
+            return;
+          }
+          if (passcode !== confirmPasscode) {
+            setPasscodeError("Passcodes do not match.");
+            return;
+          }
+          newPasscode = passcode;
+        }
+      }
+
       const newProfile = {
         ...profile,
-        apiKey,
+        apiKey: apiKey || profile.apiKey, // Keep old API key if new one is empty
         settings: {
+          ...profile.settings,
           autoFillEnabled,
           aiRecommendationsEnabled,
           passcodeEnabled,
-          passcode: passcodeEnabled ? passcode : undefined, // Pass passcode only if enabled
+          // Only include passcode for hashing if it's being updated
+          passcode: newPasscode,
+          lockoutDelay,
         }
       };
+
+      // If a new passcode wasn't entered, ensure we don't send an empty one
+      if (!newPasscode) {
+        delete newProfile.settings.passcode;
+      }
+
       saveUserProfile(newProfile).then(() => {
         alert("Settings saved!");
+        // Clear passcode fields after successful save
+        setPasscode("");
+        setConfirmPasscode("");
+        setPasscodeError("");
       });
     });
   };
@@ -121,6 +141,20 @@ const SettingsPage = () => {
               onChange={(e) => setConfirmPasscode(e.target.value)}
               style={{ width: '80px', marginLeft: '10px' }}
             />
+          </div>
+          <div style={{ marginTop: '10px' }}>
+            <label htmlFor="lockoutDelay">Lock after:</label>
+            <select
+              id="lockoutDelay"
+              value={lockoutDelay}
+              onChange={(e) => setLockoutDelay(Number(e.target.value))}
+              style={{ marginLeft: '10px' }}
+            >
+              <option value={0}>Immediately</option>
+              <option value={60000}>1 Minute</option>
+              <option value={300000}>5 Minutes</option>
+              <option value={900000}>15 Minutes</option>
+            </select>
           </div>
           {passcodeError && <p style={{ color: 'red' }}>{passcodeError}</p>}
         </div>

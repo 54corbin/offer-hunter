@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "description": "An extension to help automate job applications.",
   "action": {
-    "default_popup": "index.html",
     "default_icon": "icon16.svg"
   },
   "icons": {

@@ -33,7 +33,7 @@ const ENCRYPTION_KEY = 'your-super-secret-key'; // In a real app, this should be
  * @property {Education[]} education
  * @property {string[]} skills
  * @property {string} apiKey
- * @property {{ autoFillEnabled: boolean, aiRecommendationsEnabled: boolean, passcodeEnabled: boolean, passcodeHash?: string }} settings
+ * @property {{ autoFillEnabled: boolean, aiRecommendationsEnabled: boolean, passcodeEnabled: boolean, passcodeHash?: string, lockoutDelay?: number, lastActiveTime?: number }} settings
  */
 
 const encryptData = (data) => {
@@ -72,7 +72,7 @@ export const getUserProfile = () => {
         education: [],
         skills: [],
         apiKey: "",
-        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: '' },
+        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: '', lockoutDelay: 0, lastActiveTime: 0 },
       });
     }
   });
@@ -87,15 +87,22 @@ export const saveUserProfile = (data) => {
   return new Promise((resolve) => {
     if (chrome && chrome.storage && chrome.storage.local) {
       const profileToSave = { ...data };
+
+      // Hash the passcode if it is provided and enabled
       if (profileToSave.settings?.passcodeEnabled && profileToSave.settings.passcode) {
         profileToSave.settings.passcodeHash = CryptoJS.SHA256(profileToSave.settings.passcode).toString();
-        delete profileToSave.settings.passcode; // Don't store plaintext passcode
+      } else if (!profileToSave.settings?.passcodeEnabled) {
+        // If passcode is disabled, remove the hash
+        delete profileToSave.settings.passcodeHash;
       }
+      // Always remove the plaintext passcode before saving
+      delete profileToSave.settings.passcode;
 
       const encryptedProfile = {
         ...profileToSave,
         apiKey: profileToSave.apiKey ? encryptData(profileToSave.apiKey) : ''
       };
+
       chrome.storage.local.set({ userProfile: encryptedProfile }, () => {
         resolve();
       });

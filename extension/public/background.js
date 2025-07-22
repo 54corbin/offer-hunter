@@ -3,6 +3,10 @@
 import { getUserProfile } from '../app/storageService.js';
 import { generateContent, getRelevanceScore } from '../app/llmService.js';
 
+chrome.action.onClicked.addListener((tab) => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_USER_PROFILE") {
     getUserProfile().then(profile => {

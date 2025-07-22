@@ -58,10 +58,10 @@ const ProfilePage = () => {
 
     if (file.type === 'application/pdf') {
       const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js';
+      script.src = '/scripts/pdf.min.js';
       script.onload = () => {
         const pdfjsLib = window.pdfjsLib;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/scripts/pdf.worker.min.js';
         const reader = new FileReader();
         reader.onload = async (event) => {
           const pdf = await pdfjsLib.getDocument({ data: event.target.result }).promise;
@@ -78,7 +78,7 @@ const ProfilePage = () => {
       document.body.appendChild(script);
     } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js';
+      script.src = '/scripts/mammoth.browser.min.js';
       script.onload = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {

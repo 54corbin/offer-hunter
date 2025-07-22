@@ -7,8 +7,8 @@ import JobsPage from './jobs/page';
 import HistoryPage from './history/page';
 import SettingsPage from './settings/page';
 import { generateContent } from './llmService';
-import { getUserProfile } from './storageService';
-import PasscodePage from './passcode/PasscodeComponent';
+import { getUserProfile, saveUserProfile } from './storageService';
+import PasscodeComponent from './passcode/PasscodeComponent';
 import CryptoJS from 'crypto-js';
 
 const ProfilePage = dynamic(() => import('./profile/page'), { ssr: false });
@@ -23,7 +23,10 @@ const HomePage = () => {
   useEffect(() => {
     getUserProfile().then(profile => {
       if (profile?.settings?.passcodeEnabled && profile?.settings?.passcodeHash) {
-        setIsLocked(true);
+        const { lastActiveTime, lockoutDelay } = profile.settings;
+        if (lockoutDelay === 0 || !lastActiveTime || (Date.now() - lastActiveTime > lockoutDelay)) {
+          setIsLocked(true);
+        }
         setStoredPasscodeHash(profile.settings.passcodeHash);
       } else {
         setIsLocked(false);
@@ -35,6 +38,16 @@ const HomePage = () => {
     const hashedEnteredPasscode = CryptoJS.SHA256(enteredPasscode).toString();
     if (hashedEnteredPasscode === storedPasscodeHash) {
       setIsLocked(false);
+      getUserProfile().then(profile => {
+        const newProfile = {
+          ...profile,
+          settings: {
+            ...profile.settings,
+            lastActiveTime: Date.now(),
+          }
+        };
+        saveUserProfile(newProfile);
+      });
     } else {
       alert("Incorrect passcode.");
     }
@@ -52,10 +65,6 @@ const HomePage = () => {
   };
 
   const renderContent = () => {
-    if (isLocked) {
-      return <PasscodePage onUnlock={handleUnlock} />;
-    }
-
     switch (activeTab) {
       case 'profile':
         return <ProfilePage />;
@@ -72,7 +81,8 @@ const HomePage = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
-      <div style={{ width: '200px', backgroundColor: '#f0f0f0', padding: '20px' }}>
+      {isLocked && <PasscodeComponent onUnlock={handleUnlock} />}
+      <div style={{ width: '200px', backgroundColor: '#f0f0f0', padding: '20px', filter: isLocked ? 'blur(5px)' : 'none' }}>
         <h2>Offer Hunter</h2>
         <nav>
           <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -84,7 +94,7 @@ const HomePage = () => {
         </nav>
         <button onClick={handleGenerateCoverLetter} style={{ marginTop: '20px' }}>Generate Cover Letter</button>
       </div>
-      <div style={{ flex: 1, padding: '20px' }}>
+      <div style={{ flex: 1, padding: '20px', filter: isLocked ? 'blur(5px)' : 'none' }}>
         {renderContent()}
       </div>
       {showModal && (

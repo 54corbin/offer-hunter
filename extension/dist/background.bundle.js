@@ -6617,7 +6617,7 @@
           education: [],
           skills: [],
           apiKey: "",
-          settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: "" }
+          settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: "", lockoutDelay: 0, lastActiveTime: 0 }
         });
       }
     });
@@ -6715,6 +6715,9 @@
   };
 
   // public/background.js
+  chrome.action.onClicked.addListener((tab) => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
+  });
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "GET_USER_PROFILE") {
       getUserProfile().then((profile) => {
