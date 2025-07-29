@@ -12,7 +12,7 @@
     "48": "icon48.svg",
     "128": "icon128.svg"
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "offscreen"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },

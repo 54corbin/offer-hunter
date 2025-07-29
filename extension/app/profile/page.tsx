@@ -11,14 +11,35 @@ const defaultProfile = {
   skills: [],
 };
 
+const mergeProfiles = (base, incoming) => {
+  const merged = { ...base, ...(incoming || {}) };
+
+  merged.personalInfo = {
+    ...base.personalInfo,
+    ...(incoming?.personalInfo || {}),
+  };
+
+  merged.experience = incoming?.experience || base.experience;
+  merged.education = incoming?.education || base.education;
+  merged.skills = incoming?.skills || base.skills;
+
+  return merged;
+};
+
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     getUserProfile().then(storedProfile => {
-      setProfile(storedProfile || defaultProfile);
+      setProfile(mergeProfiles(defaultProfile, storedProfile));
     });
   }, []);
+
+  useEffect(() => {
+    if (profile) {
+      saveUserProfile(profile);
+    }
+  }, [profile]);
 
   const handleInputChange = (value, section, index, field) => {
     const newProfile = { ...profile };
@@ -34,22 +55,18 @@ const ProfilePage = () => {
     }
 
     setProfile(newProfile);
-    saveUserProfile(newProfile);
   };
 
   const addEntry = (section) => {
     const newProfile = { ...profile };
     newProfile[section].push({});
     setProfile(newProfile);
-    // Note: You might want to save only on remove or input change to avoid saving an empty object immediately.
-    saveUserProfile(newProfile);
   };
 
   const removeEntry = (section, index) => {
     const newProfile = { ...profile };
     newProfile[section].splice(index, 1);
     setProfile(newProfile);
-    saveUserProfile(newProfile);
   };
 
   const handleFileChange = async (e) => {
@@ -97,8 +114,7 @@ const ProfilePage = () => {
   const parseResumeText = async (text) => {
     const extractedProfile = await extractProfileFromResume(text);
     if (extractedProfile) {
-      setProfile(extractedProfile);
-      saveUserProfile(extractedProfile);
+      setProfile(currentProfile => mergeProfiles(currentProfile || defaultProfile, extractedProfile));
     }
   };
 

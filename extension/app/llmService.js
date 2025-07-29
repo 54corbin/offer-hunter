@@ -101,14 +101,20 @@ export const getRelevanceScore = async (profile, jobDetails) => {
 
     if (content) {
       try {
-        return JSON.parse(content);
+        // The LLM might return the JSON wrapped in markdown, so we need to extract it.
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+        let jsonString = jsonMatch ? jsonMatch[1] : content;
+        // Remove trailing commas from the JSON string before parsing.
+        jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+        return JSON.parse(jsonString);
       } catch (e) {
-        console.error("Failed to parse LLM response JSON:", e);
-        return null;
+        console.error("Failed to parse LLM response JSON:", e, "Raw content:", content);
+        // Return a default value to prevent downstream errors
+        return { score: 0, summary: "Could not analyze relevance." };
       }
     } else {
       console.error("LLM response did not contain content.");
-      return null;
+      return { score: 0, summary: "Could not analyze relevance." };
     }
   } catch (error) {
     console.error("Error calling LLM API:", error);
@@ -129,6 +135,9 @@ export const extractProfileFromResume = async (resumeText) => {
     console.error("LLM API key not found.");
     return null;
   }
+
+  const sanitizedResumeText = resumeText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+  console.log("Sanitized resume text:", sanitizedResumeText);
 
   const prompt = `
     You are an expert HR data extractor. Based on the following resume text, extract the user's professional information and return it as a JSON object. The JSON object must strictly adhere to the following schema:
@@ -165,7 +174,7 @@ export const extractProfileFromResume = async (resumeText) => {
 
     Resume Text:
     ---
-    ${resumeText}
+    ${sanitizedResumeText}
     ---
   `;
 
@@ -191,17 +200,21 @@ export const extractProfileFromResume = async (resumeText) => {
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
+    console.log("LLM response content:", content);
 
     if (content) {
       // The LLM might return the JSON wrapped in markdown, so we need to extract it.
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       const jsonString = jsonMatch ? jsonMatch[1] : content;
+      console.log("JSON string to parse:", jsonString);
       
       try {
         const parsedProfile = JSON.parse(jsonString);
+        console.log("Parsed profile:", parsedProfile);
         return parsedProfile;
       } catch (e) {
         console.error("Failed to parse LLM response JSON:", e);
+        console.error("Invalid JSON string:", jsonString);
         return null;
       }
     } else {

@@ -14,17 +14,15 @@ const JobsPage = () => {
   }, []);
 
   const handleDiscoverJobs = () => {
-    if (typeof window !== 'undefined' && window.chrome && window.chrome.tabs) {
-      window.chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        window.chrome.tabs.sendMessage(tabs[0].id, { type: "DISCOVER_JOBS" });
-      });
+    if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
+      window.chrome.runtime.sendMessage({ type: "FETCH_JOBS_FROM_SEEK" });
     }
   };
 
   return (
     <div>
       <h2>Recommended Jobs</h2>
-      <button onClick={handleDiscoverJobs}>Discover Jobs on this Page</button>
+      <button onClick={handleDiscoverJobs}>Find Jobs on Seek.com.au</button>
       {jobs.length > 0 ? (
         <ul>
           {jobs.map((job, index) => (
@@ -36,7 +34,7 @@ const JobsPage = () => {
           ))}
         </ul>
       ) : (
-        <p>No recommended jobs yet. Click the button above to discover jobs on the current page.</p>
+        <p>No recommended jobs yet. Click the button above to find jobs on Seek.com.au.</p>
       )}
     </div>
   );

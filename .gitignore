@@ -26,4 +26,10 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# Extension build artifacts
+extension/dist/
+extension/.next/
+extension/node_modules/
+ 

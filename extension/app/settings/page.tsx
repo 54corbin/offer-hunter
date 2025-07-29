@@ -161,6 +161,9 @@ const SettingsPage = () => {
       )}
 
       <button onClick={handleSave} style={{ marginTop: '20px' }}>Save Settings</button>
+      <div style={{ marginTop: '20px' }}>
+        <a href="/privacy">Privacy Policy</a>
+      </div>
     </div>
   );
 };

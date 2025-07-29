@@ -12,7 +12,7 @@ if [ -d "dist/_next" ]; then
 fi
 
 # Update references in HTML, JS, and CSS files
-find dist -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \) -exec sed -i 's/\/_next\//\/next\//g' {} +
+find dist -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \) -exec sed -i 's/\/_next\//next\//g' {} +
 
 # Extract all inline scripts from HTML files to be compliant with Content Security Policy (CSP).
 # This is necessary for Chrome Extensions, which forbid inline JavaScript.

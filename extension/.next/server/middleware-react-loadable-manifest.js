@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/page.tsx -> ./profile/page":{"id":7083,"files":["static/chunks/83.63d9fcebafae8ddd.js"]}}';

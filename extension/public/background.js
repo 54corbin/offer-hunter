@@ -3,6 +3,8 @@
 import { getUserProfile } from '../app/storageService.js';
 import { generateContent, getRelevanceScore } from '../app/llmService.js';
 
+const OFFSCREEN_DOCUMENT_PATH = '/offscreen.html';
+
 chrome.action.onClicked.addListener((tab) => {
   chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
 });
@@ -36,17 +38,57 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
 
-  if (request.type === "ANALYZE_JOBS") {
-    getUserProfile().then(async (profile) => {
-      const recommendedJobs = [];
-      for (const job of request.jobs) {
-        // In a real application, you would fetch the full job description here.
-        // For this example, we'll just use the title as the description.
-        const jobDetails = { title: job.title, description: job.title, company: job.company, url: job.url };
-        const { score, summary } = await getRelevanceScore(profile, jobDetails);
-        recommendedJobs.push({ ...jobDetails, score, summary });
-      }
-      chrome.storage.local.set({ recommendedJobs });
-    });
+  if (request.type === 'FETCH_JOBS_FROM_SEEK') {
+    fetch('https://www.seek.com.au/software-engineer-jobs')
+      .then(response => response.text())
+      .then(async (html) => {
+        await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
+        chrome.runtime.sendMessage({
+          type: 'SCRAPE_SEEK',
+          target: 'offscreen',
+          html: html
+        }, (response) => {
+          if (response && response.jobs) {
+            analyzeAndStoreJobs(response.jobs);
+          }
+        });
+      });
+    return true;
   }
 });
+
+async function analyzeAndStoreJobs(jobs) {
+  const profile = await getUserProfile();
+  const recommendedJobs = [];
+  for (const job of jobs) {
+    const jobDetails = { title: job.title, description: job.title, company: job.company, url: job.url };
+    const relevance = await getRelevanceScore(profile, jobDetails);
+    if (relevance) {
+      const { score, summary } = relevance;
+      recommendedJobs.push({ ...jobDetails, score, summary });
+    }
+  }
+  chrome.storage.local.set({ recommendedJobs });
+}
+
+async function hasOffscreenDocument(path) {
+  const offscreenUrl = chrome.runtime.getURL(path);
+  const matchedClients = await clients.matchAll();
+  for (const client of matchedClients) {
+    if (client.url === offscreenUrl) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function setupOffscreenDocument(path) {
+  if (await hasOffscreenDocument(path)) {
+    return;
+  }
+  await chrome.offscreen.createDocument({
+    url: path,
+    reasons: ['DOM_PARSER'],
+    justification: 'to parse HTML from fetch request'
+  });
+}
