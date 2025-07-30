@@ -119,90 +119,105 @@ const ProfilePage = () => {
   };
 
   if (!profile) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center h-full">Loading...</div>;
   }
 
   return (
-    <div>
-      <h2>Profile Management</h2>
+    <div className="space-y-8">
+      <h2 className="text-2xl font-bold text-gray-800">Profile Management</h2>
 
-      <section>
-        <h3>Upload Resume</h3>
-        <input type="file" accept=".pdf,.docx" onChange={handleFileChange} />
-      </section>
-
-      <section>
-        <h3>Personal Information</h3>
-        <input
-          type="text"
-          placeholder="Name"
-          value={profile.personalInfo?.name || ''}
-          onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'name')}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={profile.personalInfo?.email || ''}
-          onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'email')}
-        />
-        <input
-          type="tel"
-          placeholder="Phone"
-          value={profile.personalInfo?.phone || ''}
-          onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'phone')}
+      <section className="p-6 bg-white rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Upload Resume</h3>
+        <input 
+          type="file" 
+          accept=".pdf,.docx" 
+          onChange={handleFileChange}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
       </section>
 
-      <section>
-        <h3>Work Experience</h3>
+      <section className="p-6 bg-white rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input
+            type="text"
+            placeholder="Name"
+            value={profile.personalInfo?.name || ''}
+            onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'name')}
+            className="p-2 border rounded-md"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={profile.personalInfo?.email || ''}
+            onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'email')}
+            className="p-2 border rounded-md"
+          />
+          <input
+            type="tel"
+            placeholder="Phone"
+            value={profile.personalInfo?.phone || ''}
+            onChange={(e) => handleInputChange(e.target.value, 'personalInfo', null, 'phone')}
+            className="p-2 border rounded-md"
+          />
+        </div>
+      </section>
+
+      <section className="p-6 bg-white rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Work Experience</h3>
         {profile.experience?.map((exp, index) => (
-          <div key={index}>
+          <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 items-center">
             <input
               type="text"
               placeholder="Company"
               value={exp.company || ''}
               onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'company')}
+              className="p-2 border rounded-md"
             />
             <input
               type="text"
               placeholder="Title"
               value={exp.title || ''}
               onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'title')}
+              className="p-2 border rounded-md"
             />
-            <button onClick={() => removeEntry('experience', index)}>Remove</button>
+            <button onClick={() => removeEntry('experience', index)} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Remove</button>
           </div>
         ))}
-        <button onClick={() => addEntry('experience')}>Add Experience</button>
+        <button onClick={() => addEntry('experience')} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Add Experience</button>
       </section>
 
-      <section>
-        <h3>Education</h3>
+      <section className="p-6 bg-white rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Education</h3>
         {profile.education?.map((edu, index) => (
-          <div key={index}>
+          <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 items-center">
             <input
               type="text"
               placeholder="Institution"
               value={edu.institution || ''}
               onChange={(e) => handleInputChange(e.target.value, 'education', index, 'institution')}
+              className="p-2 border rounded-md"
             />
             <input
               type="text"
               placeholder="Degree"
               value={edu.degree || ''}
               onChange={(e) => handleInputChange(e.target.value, 'education', index, 'degree')}
+              className="p-2 border rounded-md"
             />
-            <button onClick={() => removeEntry('education', index)}>Remove</button>
+            <button onClick={() => removeEntry('education', index)} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Remove</button>
           </div>
         ))}
-        <button onClick={() => addEntry('education')}>Add Education</button>
+        <button onClick={() => addEntry('education')} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Add Education</button>
       </section>
 
-      <section>
-        <h3>Skills</h3>
+      <section className="p-6 bg-white rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Skills</h3>
         <textarea
           placeholder="Skills (comma-separated)"
           value={profile.skills?.join(', ') || ''}
           onChange={(e) => handleInputChange(e.target.value.split(',').map(s => s.trim()), null, null, 'skills')}
+          className="w-full p-2 border rounded-md"
         />
       </section>
     </div>

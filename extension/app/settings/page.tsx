@@ -73,96 +73,112 @@ const SettingsPage = () => {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Settings</h1>
-      <div>
-        <label htmlFor="apiKey">LLM API Key:</label>
-        <input
-          type="password"
-          id="apiKey"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          style={{ width: '300px', marginLeft: '10px' }}
-        />
-      </div>
-      <div style={{ marginTop: '10px' }}>
-        <label>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
+      
+      <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
+        <div>
+          <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700">LLM API Key:</label>
           <input
+            type="password"
+            id="apiKey"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+        </div>
+        <div className="flex items-center">
+          <input
+            id="autoFill"
             type="checkbox"
             checked={autoFillEnabled}
             onChange={(e) => setAutoFillEnabled(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          Enable Auto-fill
-        </label>
-      </div>
-      <div style={{ marginTop: '10px' }}>
-        <label>
+          <label htmlFor="autoFill" className="ml-2 block text-sm text-gray-900">
+            Enable Auto-fill
+          </label>
+        </div>
+        <div className="flex items-center">
           <input
+            id="aiRecommendations"
             type="checkbox"
             checked={aiRecommendationsEnabled}
             onChange={(e) => setAiRecommendationsEnabled(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          Enable AI Recommendations
-        </label>
+          <label htmlFor="aiRecommendations" className="ml-2 block text-sm text-gray-900">
+            Enable AI Recommendations
+          </label>
+        </div>
       </div>
 
-      <h2 style={{ marginTop: '20px' }}>Passcode Settings</h2>
-      <div style={{ marginTop: '10px' }}>
-        <label>
+      <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
+        <h2 className="text-xl font-semibold">Passcode Settings</h2>
+        <div className="flex items-center">
           <input
+            id="passcodeEnabled"
             type="checkbox"
             checked={passcodeEnabled}
             onChange={(e) => setPasscodeEnabled(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          Enable Passcode
-        </label>
+          <label htmlFor="passcodeEnabled" className="ml-2 block text-sm text-gray-900">
+            Enable Passcode
+          </label>
+        </div>
+
+        {passcodeEnabled && (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="passcode" className="block text-sm font-medium text-gray-700">Passcode (4 digits):</label>
+              <input
+                type="password"
+                id="passcode"
+                maxLength={4}
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="confirmPasscode" className="block text-sm font-medium text-gray-700">Confirm Passcode:</label>
+              <input
+                type="password"
+                id="confirmPasscode"
+                maxLength={4}
+                value={confirmPasscode}
+                onChange={(e) => setConfirmPasscode(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="lockoutDelay" className="block text-sm font-medium text-gray-700">Lock after:</label>
+              <select
+                id="lockoutDelay"
+                value={lockoutDelay}
+                onChange={(e) => setLockoutDelay(Number(e.target.value))}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              >
+                <option value={0}>Immediately</option>
+                <option value={60000}>1 Minute</option>
+                <option value={300000}>5 Minutes</option>
+                <option value={900000}>15 Minutes</option>
+              </select>
+            </div>
+            {passcodeError && <p className="text-sm text-red-600">{passcodeError}</p>}
+          </div>
+        )}
       </div>
 
-      {passcodeEnabled && (
-        <div style={{ marginTop: '10px' }}>
-          <div>
-            <label htmlFor="passcode">Passcode (4 digits):</label>
-            <input
-              type="password"
-              id="passcode"
-              maxLength={4}
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              style={{ width: '80px', marginLeft: '10px' }}
-            />
-          </div>
-          <div style={{ marginTop: '10px' }}>
-            <label htmlFor="confirmPasscode">Confirm Passcode:</label>
-            <input
-              type="password"
-              id="confirmPasscode"
-              maxLength={4}
-              value={confirmPasscode}
-              onChange={(e) => setConfirmPasscode(e.target.value)}
-              style={{ width: '80px', marginLeft: '10px' }}
-            />
-          </div>
-          <div style={{ marginTop: '10px' }}>
-            <label htmlFor="lockoutDelay">Lock after:</label>
-            <select
-              id="lockoutDelay"
-              value={lockoutDelay}
-              onChange={(e) => setLockoutDelay(Number(e.target.value))}
-              style={{ marginLeft: '10px' }}
-            >
-              <option value={0}>Immediately</option>
-              <option value={60000}>1 Minute</option>
-              <option value={300000}>5 Minutes</option>
-              <option value={900000}>15 Minutes</option>
-            </select>
-          </div>
-          {passcodeError && <p style={{ color: 'red' }}>{passcodeError}</p>}
-        </div>
-      )}
-
-      <button onClick={handleSave} style={{ marginTop: '20px' }}>Save Settings</button>
-      <div style={{ marginTop: '20px' }}>
-        <a href="/privacy">Privacy Policy</a>
+      <div className="flex justify-between items-center">
+        <button 
+          onClick={handleSave} 
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+        >
+          Save Settings
+        </button>
+        <a href="/privacy" className="text-sm text-blue-600 hover:underline">Privacy Policy</a>
       </div>
     </div>
   );

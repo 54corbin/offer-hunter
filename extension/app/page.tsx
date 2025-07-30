@@ -1,20 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import JobsPage from './jobs/page';
-import HistoryPage from './history/page';
-import SettingsPage from './settings/page';
 import { generateContent } from './llmService';
 import { getUserProfile, saveUserProfile } from './storageService';
 import PasscodeComponent from './passcode/PasscodeComponent';
 import CryptoJS from 'crypto-js';
+import Layout from './components/Layout';
+import JobsPage from './jobs/page';
+import HistoryPage from './history/page';
+import SettingsPage from './settings/page';
 
 const ProfilePage = dynamic(() => import('./profile/page'), { ssr: false });
 
 const HomePage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
   const [coverLetter, setCoverLetter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -64,7 +63,7 @@ const HomePage = () => {
     setShowModal(true);
   };
 
-  const renderContent = () => {
+  const renderContent = (activeTab) => {
     switch (activeTab) {
       case 'profile':
         return <ProfilePage />;
@@ -80,33 +79,41 @@ const HomePage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
+    <>
       {isLocked && <PasscodeComponent onUnlock={handleUnlock} />}
-      <div style={{ width: '200px', backgroundColor: '#f0f0f0', padding: '20px', filter: isLocked ? 'blur(5px)' : 'none' }}>
-        <h2>Offer Hunter</h2>
-        <nav>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            <li style={{ marginBottom: '10px' }}><a href="#" onClick={() => setActiveTab('profile')}>Profile</a></li>
-            <li style={{ marginBottom: '10px' }}><a href="#" onClick={() => setActiveTab('jobs')}>Recommended Jobs</a></li>
-            <li style={{ marginBottom: '10px' }}><a href="#" onClick={() => setActiveTab('history')}>Application History</a></li>
-            <li style={{ marginBottom: '10px' }}><a href="#" onClick={() => setActiveTab('settings')}>Settings</a></li>
-          </ul>
-        </nav>
-        <button onClick={handleGenerateCoverLetter} style={{ marginTop: '20px' }}>Generate Cover Letter</button>
-      </div>
-      <div style={{ flex: 1, padding: '20px', filter: isLocked ? 'blur(5px)' : 'none' }}>
-        {renderContent()}
+      <div className={isLocked ? 'blur-sm' : ''}>
+        <Layout>
+          {(activeTab) => (
+            <>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-3xl font-bold">Dashboard</h2>
+                <button 
+                  onClick={handleGenerateCoverLetter} 
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Generate Cover Letter
+                </button>
+              </div>
+              {renderContent(activeTab)}
+            </>
+          )}
+        </Layout>
       </div>
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', width: '80%', maxHeight: '80%', overflowY: 'auto' }}>
-            <h3>Generated Cover Letter</h3>
-            <p>{coverLetter}</p>
-            <button onClick={() => setShowModal(false)}>Close</button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold mb-4">Generated Cover Letter</h3>
+            <p className="whitespace-pre-wrap">{coverLetter}</p>
+            <button 
+              onClick={() => setShowModal(false)} 
+              className="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

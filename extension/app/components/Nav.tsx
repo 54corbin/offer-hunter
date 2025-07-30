@@ -1,16 +1,34 @@
 "use client";
 
-import Link from 'next/link';
+import React from 'react';
 
-const Nav = () => {
+const Nav = ({ activeTab, setActiveTab }) => {
+  const navItems = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'jobs', label: 'Recommended Jobs' },
+    { id: 'history', label: 'Application History' },
+    { id: 'settings', label: 'Settings' },
+  ];
+
   return (
-    <nav style={{ padding: '10px', borderBottom: '1px solid #ccc', marginBottom: '20px' }}>
-      <Link href="/" style={{ marginRight: '10px' }}>Home</Link>
-      <Link href="/profile" style={{ marginRight: '10px' }}>Profile</Link>
-      <Link href="/jobs" style={{ marginRight: '10px' }}>Jobs</Link>
-      <Link href="/history" style={{ marginRight: '10px' }}>History</Link>
-      <Link href="/settings" style={{ marginRight: '10px' }}>Settings</Link>
-      <Link href="/privacy">Privacy</Link>
+    <nav>
+      <ul>
+        {navItems.map((item) => (
+          <li key={item.id} className="mb-2">
+            <a
+              href="#"
+              onClick={() => setActiveTab(item.id)}
+              className={`block px-5 py-2 rounded-md ${
+                activeTab === item.id
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
     </nav>
   );
 };

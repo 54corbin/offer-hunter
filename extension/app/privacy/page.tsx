@@ -13,9 +13,9 @@ const PrivacyPolicyPage = () => {
   }, []);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Privacy Policy</h1>
-      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'sans-serif' }}>
+    <div className="p-10 bg-white rounded-lg shadow-md">
+      <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
+      <pre className="whitespace-pre-wrap font-sans text-gray-700">
         {policy}
       </pre>
     </div>
