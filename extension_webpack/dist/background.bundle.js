@@ -1,0 +1,1 @@
+(()=>{"use strict";chrome.runtime.onInstalled.addListener(()=>{console.log("Offer Hunter extension installed.")}),chrome.action.onClicked.addListener(e=>{chrome.tabs.create({url:chrome.runtime.getURL("index.html")})})})();
