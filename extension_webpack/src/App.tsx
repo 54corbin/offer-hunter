@@ -14,6 +14,7 @@ import CryptoJS from 'crypto-js';
 
 const App: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
+  const [passcodeError, setPasscodeError] = useState(false);
   const [storedPasscodeHash, setStoredPasscodeHash] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,9 +32,11 @@ const App: React.FC = () => {
   }, []);
 
   const handleUnlock = (enteredPasscode: string) => {
+    if (enteredPasscode.length < 4) return; 
     const hashedEnteredPasscode = CryptoJS.SHA256(enteredPasscode).toString();
     if (hashedEnteredPasscode === storedPasscodeHash) {
       setIsLocked(false);
+      setPasscodeError(false);
       getUserProfile().then(profile => {
         if (profile) {
           const newProfile = {
@@ -47,14 +50,15 @@ const App: React.FC = () => {
         }
       });
     } else {
-      alert("Incorrect passcode.");
+      setPasscodeError(true);
+      setTimeout(() => setPasscodeError(false), 600);
     }
   };
 
   return (
     <>
-      {isLocked && <PasscodeComponent onUnlock={handleUnlock} />}
-      <div className={isLocked ? 'blur-sm' : ''}>
+      {isLocked && <PasscodeComponent onUnlock={handleUnlock} isError={passcodeError} />}
+      <div className={isLocked ? 'blur-sm' : '' }>
         <Router>
           <Layout>
             <Routes>
