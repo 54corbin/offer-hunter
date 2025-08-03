@@ -30,10 +30,13 @@ The project is a Chrome Extension built with React, TypeScript, and Webpack. It 
 #### Enhancement Type
 
 *   [x] UI/UX Overhaul
+*   [x] New Feature Addition
 
 #### Enhancement Description
 
 The goal is to modernize the existing user interface to make it more visually appealing, intuitive, and user-friendly. This involves a significant redesign of the current UI components and layout.
+
+A new feature for managing multiple resumes will also be added, allowing users to store and select from various resume versions for their job applications.
 
 #### Impact Assessment
 
@@ -46,6 +49,7 @@ The goal is to modernize the existing user interface to make it more visually ap
 *   Improve the overall visual appeal of the application.
 *   Enhance the user experience (UX) to make it more intuitive.
 *   Increase user engagement and satisfaction through a modern design.
+*   Provide users the flexibility to tailor applications with different resumes.
 *   Ensure the new UI is responsive and accessible.
 
 #### Background Context
@@ -61,6 +65,13 @@ The current UI is functional but lacks modern design aesthetics. A UI/UX overhau
 *   **FR3:** All forms for user input will be redesigned for improved usability and clarity.
 *   **FR4:** Data displays will be redesigned to be more organized and visually engaging.
 
+#### Multiple Resume Management
+*   **FR5:** Users shall be able to upload multiple resume files to their profile.
+*   **FR6:** Users shall be able to view a list of all their uploaded resumes.
+*   **FR7:** Users shall be able to assign a unique name or label to each resume for easy identification.
+*   **FR8:** Users shall be able to delete resumes from their profile.
+*   **FR9:** Users shall be able to select a specific resume to be used for a job application.
+
 ### Non-Functional
 
 *   **NFR1:** The UI will adopt a modern, clean, and professional aesthetic based on Material Design principles.
@@ -72,7 +83,7 @@ The current UI is functional but lacks modern design aesthetics. A UI/UX overhau
 ### Compatibility Requirements
 
 *   **CR1: API/Service Compatibility:** The new UI must integrate seamlessly with the existing services.
-*   **CR2: Data Schema Compatibility:** The redesigned UI must not introduce any breaking changes to the data structures.
+*   **CR2: Data Schema Compatibility:** The redesigned UI must not introduce any breaking changes to the data structures, with the exception of the UserProfile, which will be updated to support an array of resumes. This change must be backward compatible.
 *   **CR3: UI/UX Consistency:** The new design will establish a clear visual identity.
 *   **CR4: Routing Compatibility:** The existing routing structure will be preserved.
 
@@ -141,6 +152,16 @@ This enhancement will be structured as a single, comprehensive epic to ensure a 
 3.  **Redesign the Lock Screen & Dashboard**: Redesign the initial screen and the main dashboard.
 4.  **Redesign the Profiles & Settings Pages**: Redesign the forms and layouts for managing profiles and settings.
 5.  **Redesign the Job History Page**: Redesign the page for tracking job applications.
+
+## Epic 2: Multiple Resume Support
+
+**Epic Goal**: To allow users to upload, store, and manage multiple resumes within their profile, enabling them to select the most relevant resume for each job application.
+
+**Stories**:
+
+1.  **Update Data Structure for Multiple Resumes**: Modify the `UserProfile` data structure in `storageService.ts` to support an array of resumes.
+2.  **Implement Resume Upload and Management UI**: Create the UI for users to upload, name, and delete multiple resumes in the Profile/Settings page.
+3.  **Integrate Resume Selection into Application Flow**: Add a mechanism for users to select which resume to use when initiating a new job application.
 
 ## Out of Scope
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, ChangeEvent, KeyboardEvent } from 'react';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { FiLock } from 'react-icons/fi';
+import { FiLock, FiUnlock } from 'react-icons/fi';
 
 interface PasscodeComponentProps {
   onUnlock: (passcode: string) => void;
@@ -44,14 +44,14 @@ const PasscodeComponent: React.FC<PasscodeComponentProps> = ({ onUnlock, isError
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
-      <Card className={`w-full max-w-sm p-8 bg-white/80 dark:bg-slate-800/80 border border-slate-200/20 shadow-2xl ${getShakeClass()}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 bg-opacity-50 backdrop-blur-lg">
+      <Card className={`w-full max-w-sm p-8 bg-white/90 dark:bg-slate-800/90 border border-slate-200/10 shadow-2xl rounded-2xl ${getShakeClass()}`}>
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-white">
-            <FiLock className="h-6 w-6" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg">
+            <FiLock className="h-8 w-8" />
           </div>
-          <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">Enter Passcode</h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
+          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">Enter Passcode</h2>
+          <p className="mt-2 text-gray-600 dark:text-slate-400">
             This extension is locked for your security.
           </p>
         </div>
@@ -66,19 +66,23 @@ const PasscodeComponent: React.FC<PasscodeComponentProps> = ({ onUnlock, isError
                 value={digit}
                 onChange={(e) => handlePasscodeChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="h-16 w-12 rounded-lg border border-slate-300 bg-slate-50 text-center text-3xl font-semibold text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-slate-700 dark:text-white dark:border-slate-600"
+                className="h-16 w-12 rounded-lg border-2 border-slate-300/50 bg-slate-50/50 text-center text-3xl font-semibold text-gray-900 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none dark:bg-slate-700/50 dark:text-white dark:border-slate-600/50"
                 autoFocus={index === 0}
               />
             ))}
           </div>
         </div>
         {isError && (
-            <p className="mt-4 text-center text-sm text-red-500">
+            <p className="mt-4 text-center text-sm font-medium text-red-500">
                 Incorrect passcode. Please try again.
             </p>
         )}
         <div className="mt-8">
-          <Button onClick={() => onUnlock(passcode.join(''))} className="w-full">
+          <Button 
+            onClick={() => onUnlock(passcode.join(''))} 
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold py-3 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+          >
+            <FiUnlock />
             Unlock
           </Button>
         </div>
