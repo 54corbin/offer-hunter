@@ -36,7 +36,7 @@ The project is a Chrome Extension built with React, TypeScript, and Webpack. It 
 
 The goal is to modernize the existing user interface to make it more visually appealing, intuitive, and user-friendly. This involves a significant redesign of the current UI components and layout.
 
-A new feature for managing multiple resumes will also be added, allowing users to store and select from various resume versions for their job applications.
+A new feature for managing multiple resumes will also be added, allowing users to store and select from various resume versions for their job applications. Additionally, a job fetching and matching feature will be implemented to find relevant job postings from external sites like Seek and LinkedIn.
 
 #### Impact Assessment
 
@@ -50,6 +50,7 @@ A new feature for managing multiple resumes will also be added, allowing users t
 *   Enhance the user experience (UX) to make it more intuitive.
 *   Increase user engagement and satisfaction through a modern design.
 *   Provide users the flexibility to tailor applications with different resumes.
+*   Proactively find and recommend relevant job opportunities to the user.
 *   Ensure the new UI is responsive and accessible.
 
 #### Background Context
@@ -71,6 +72,13 @@ The current UI is functional but lacks modern design aesthetics. A UI/UX overhau
 *   **FR7:** Users shall be able to assign a unique name or label to each resume for easy identification.
 *   **FR8:** Users shall be able to delete resumes from their profile.
 *   **FR9:** Users shall be able to select a specific resume to be used for a job application.
+
+#### Job Fetching and Matching
+*   **FR10:** The extension shall be able to scrape job listings from Seek.com.au and LinkedIn.com.
+*   **FR11:** The scraped job listings shall be compared against a user-selected resume using an LLM to determine a match score.
+*   **FR12:** The matched jobs, along with their scores, shall be displayed on the "Recommended Jobs" page.
+*   **FR13:** Users shall be able to trigger the job fetching process manually from the "Recommended Jobs" page.
+
 
 ### Non-Functional
 
@@ -162,6 +170,17 @@ This enhancement will be structured as a single, comprehensive epic to ensure a 
 1.  **Update Data Structure for Multiple Resumes**: Modify the `UserProfile` data structure in `storageService.ts` to support an array of resumes.
 2.  **Implement Resume Upload and Management UI**: Create the UI for users to upload, name, and delete multiple resumes in the Profile/Settings page.
 3.  **Integrate Resume Selection into Application Flow**: Add a mechanism for users to select which resume to use when initiating a new job application.
+
+## Epic 3: Job Fetching and Matching
+
+**Epic Goal**: To automate the discovery of relevant job opportunities by fetching listings from external job sites and matching them against the user's resume.
+
+**Stories**:
+
+1.  **Develop Content Scripts for Job Scraping**: Create and inject content scripts for Seek.com.au and LinkedIn.com to extract job listing data.
+2.  **Implement Job Matching Logic**: In the background script, process the scraped job data, send it to the LLM service along with the selected resume, and calculate a match score.
+3.  **Store and Display Matched Jobs**: Save the matched jobs and their scores to storage and display them on the "Recommended Jobs" page.
+
 
 ## Out of Scope
 

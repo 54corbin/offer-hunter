@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { FiSearch, FiExternalLink } from 'react-icons/fi';
+import { FiSearch, FiExternalLink, FiFileText } from 'react-icons/fi';
+import { getUserProfile, UserProfile, Resume } from '../services/storageService';
+import ResumeSelectionModal from '../components/ResumeSelectionModal';
 
 const JobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.storage.local) {
@@ -10,6 +15,7 @@ const JobsPage: React.FC = () => {
         setJobs(result.recommendedJobs.sort((a: any, b: any) => b.score - a.score));
       });
     }
+    getUserProfile().then(setProfile);
   }, []);
 
   const handleDiscoverJobs = () => {
@@ -18,8 +24,34 @@ const JobsPage: React.FC = () => {
     }
   };
 
+  const handleApply = (job: any) => {
+    setSelectedJob(job);
+    if (profile?.resumes && profile.resumes.length > 1) {
+      setShowModal(true);
+    } else if (profile?.resumes && profile.resumes.length === 1) {
+      // Auto-select the only resume
+      handleResumeSelect(profile.resumes[0]);
+    } else {
+      // No resumes
+      setShowModal(true);
+    }
+  };
+
+  const handleResumeSelect = (resume: Resume) => {
+    console.log(`Applying to ${selectedJob.title} with resume: ${resume.name}`);
+    // In a real scenario, this would trigger the auto-fill process with the selected resume data.
+    setShowModal(false);
+  };
+
   return (
     <div className="space-y-8">
+      {showModal && profile && (
+        <ResumeSelectionModal
+          resumes={profile.resumes || []}
+          onSelect={handleResumeSelect}
+          onClose={() => setShowModal(false)}
+        />
+      )}
       <div className="flex justify-between items-center">
         <h2 className="text-5xl font-bold text-slate-800">Recommended Jobs</h2>
         <button 
@@ -41,14 +73,19 @@ const JobsPage: React.FC = () => {
               </div>
               <div className="mt-4 flex justify-between items-center">
                 <p className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-400 text-lg">Score: {job.score}</p>
-                <a 
-                  href={job.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center text-sm text-blue-500 hover:underline"
-                >
-                  View Posting <FiExternalLink className="ml-1" />
-                </a>
+                <div className="flex items-center space-x-2">
+                  <a 
+                    href={job.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center text-sm text-blue-500 hover:underline"
+                  >
+                    View Posting <FiExternalLink className="ml-1" />
+                  </a>
+                  <button onClick={() => handleApply(job)} className="flex items-center text-sm text-green-500 hover:underline">
+                    Apply <FiFileText className="ml-1" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

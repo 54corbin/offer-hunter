@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getUserProfile, saveUserProfile, UserProfile } from '../services/storageService';
-import { extractProfileFromResume } from '../services/llmService';
-import { FiUpload, FiPlus, FiTrash2, FiUser, FiMail, FiPhone, FiBriefcase, FiBookOpen, FiAward } from 'react-icons/fi';
-
-declare global {
-  interface Window {
-    pdfjsLib: any;
-    mammoth: any;
-  }
-}
+import { FiPlus, FiTrash2, FiUser, FiMail, FiPhone, FiBriefcase, FiBookOpen, FiAward } from 'react-icons/fi';
+import ResumeManager from '../components/ResumeManager';
 
 const defaultProfile: UserProfile = {
   personalInfo: { name: '', email: '', phone: '' },
@@ -16,6 +9,7 @@ const defaultProfile: UserProfile = {
   education: [],
   skills: [],
   apiKey: '',
+  resumes: [],
   settings: {
     autoFillEnabled: true,
     aiRecommendationsEnabled: true,
@@ -29,12 +23,12 @@ const mergeProfiles = (base: UserProfile, incoming: Partial<UserProfile>): UserP
   merged.experience = incoming?.experience && incoming.experience.length > 0 ? incoming.experience : base.experience;
   merged.education = incoming?.education && incoming.education.length > 0 ? incoming.education : base.education;
   merged.skills = incoming?.skills && incoming.skills.length > 0 ? incoming.skills : base.skills;
+  merged.resumes = incoming?.resumes && incoming.resumes.length > 0 ? incoming.resumes : base.resumes;
   return merged;
 };
 
 const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [fileName, setFileName] = useState<string>('');
 
   useEffect(() => {
     getUserProfile().then(storedProfile => {
@@ -42,11 +36,9 @@ const ProfilePage: React.FC = () => {
     });
   }, []);
 
-  useEffect(() => {
-    if (profile) {
-      saveUserProfile(profile);
-    }
-  }, [profile]);
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
+    setProfile(updatedProfile);
+  };
 
   const handleInputChange = (value: any, section: keyof UserProfile | 'personalInfo' | 'experience' | 'education', index: number | null, field: string) => {
     setProfile(prevProfile => {
@@ -61,6 +53,7 @@ const ProfilePage: React.FC = () => {
       } else {
         (newProfile as any)[field] = value;
       }
+      saveUserProfile(newProfile);
       return newProfile;
     });
   };
@@ -71,6 +64,7 @@ const ProfilePage: React.FC = () => {
       const newProfile = { ...prevProfile };
       const newEntry = section === 'experience' ? { company: '', title: '' } : { institution: '', degree: '' };
       (newProfile[section] as any[]).push(newEntry);
+      saveUserProfile(newProfile);
       return newProfile;
     });
   };
@@ -80,61 +74,9 @@ const ProfilePage: React.FC = () => {
       if (!prevProfile) return null;
       const newProfile = { ...prevProfile };
       (newProfile[section] as any[]).splice(index, 1);
+      saveUserProfile(newProfile);
       return newProfile;
     });
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setFileName(file.name);
-
-    if (file.type === 'application/pdf') {
-      const script = document.createElement('script');
-      script.src = 'scripts/pdf.min.js';
-      script.onload = () => {
-        const pdfjsLib = window.pdfjsLib;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'scripts/pdf.worker.min.js';
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          if (event.target?.result) {
-            const pdf = await pdfjsLib.getDocument({ data: event.target.result }).promise;
-            let text = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const content = await page.getTextContent();
-              text += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ');
-            }
-            parseResumeText(text);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      };
-      document.body.appendChild(script);
-    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      const script = document.createElement('script');
-      script.src = 'scripts/mammoth.browser.min.js';
-      script.onload = () => {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          if (event.target?.result instanceof ArrayBuffer) {
-            const result = await window.mammoth.extractRawText({ arrayBuffer: event.target.result });
-            const text = result.value;
-            parseResumeText(text);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      };
-      document.body.appendChild(script);
-    }
-  };
-
-  const parseResumeText = async (text: string) => {
-    const extractedProfile = await extractProfileFromResume(text);
-    if (extractedProfile) {
-      setProfile(currentProfile => mergeProfiles(currentProfile || defaultProfile, extractedProfile));
-    }
   };
 
   if (!profile) {
@@ -145,18 +87,7 @@ const ProfilePage: React.FC = () => {
     <div className="space-y-8 p-4">
       <h2 className="text-4xl font-bold text-slate-800">Profile Management</h2>
 
-      <section className="p-6 bg-white rounded-2xl shadow-lg">
-        <h3 className="text-2xl font-semibold mb-4 text-slate-700">Upload Resume</h3>
-        <div className="flex items-center space-x-4">
-          <label className="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer">
-            <FiUpload className="mr-2" />
-            <span>Choose File</span>
-            <input type="file" accept=".pdf,.docx" onChange={handleFileChange} className="hidden" />
-          </label>
-          {fileName && <span className="text-slate-500">{fileName}</span>}
-          <span className="text-sm text-slate-400">Accepts .pdf and .docx files.</span>
-        </div>
-      </section>
+      <ResumeManager profile={profile} onProfileUpdate={handleProfileUpdate} />
 
       <section className="p-6 bg-white rounded-2xl shadow-lg">
         <h3 className="text-2xl font-semibold mb-4 text-slate-700">Personal Information</h3>
