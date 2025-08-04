@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { FiSearch, FiExternalLink, FiFileText } from 'react-icons/fi';
 import { getUserProfile, UserProfile, Resume } from '../services/storageService';
 import ResumeSelectionModal from '../components/ResumeSelectionModal';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const JobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.storage.local) {
@@ -16,11 +19,35 @@ const JobsPage: React.FC = () => {
       });
     }
     getUserProfile().then(setProfile);
+
+    const messageListener = (message: any) => {
+      if (message.type === "JOB_MATCHING_PROGRESS") {
+        setProgress(message.progress);
+      } else if (message.type === "JOB_MATCHING_COMPLETE") {
+        setIsLoading(false);
+        setProgress(0);
+        // Refetch jobs to update the list
+        window.chrome.storage.local.get({ recommendedJobs: [] }, (result) => {
+          setJobs(result.recommendedJobs.sort((a: any, b: any) => b.score - a.score));
+        });
+      }
+    };
+    chrome.runtime.onMessage.addListener(messageListener);
+    return () => chrome.runtime.onMessage.removeListener(messageListener);
   }, []);
 
   const handleDiscoverJobs = () => {
     if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
+      setIsLoading(true);
+      setProgress(0);
       window.chrome.runtime.sendMessage({ type: "FETCH_JOBS_FROM_SEEK" });
+    }
+  };
+
+  const handleCancel = () => {
+    setIsLoading(false);
+    if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
+      window.chrome.runtime.sendMessage({ type: "CANCEL_JOB_FETCH" });
     }
   };
 
@@ -45,6 +72,7 @@ const JobsPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {isLoading && <LoadingOverlay progress={progress} onCancel={handleCancel} />}
       {showModal && profile && (
         <ResumeSelectionModal
           resumes={profile.resumes || []}

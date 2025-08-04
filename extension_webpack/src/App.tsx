@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Route, Routes } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import HomePage from './pages/HomePage';
 import HistoryPage from './pages/HistoryPage';
 import JobsPage from './pages/JobsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -62,7 +61,7 @@ const App: React.FC = () => {
         <Router>
           <Layout>
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={<Navigate to="/profile" replace />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/jobs" element={<JobsPage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />

@@ -13,6 +13,7 @@ export interface WorkExperience {
   title: string;
   startDate: string;
   endDate: string;
+  summary: string;
   responsibilities: string[];
 }
 
@@ -27,6 +28,14 @@ export interface Resume {
   id: string;
   name: string;
   data: string; // Base64 encoded resume data
+  text: string; // Extracted plain text
+}
+
+export interface ApiProvider {
+  id: string;
+  name: 'OpenAI' | 'Gemini';
+  apiKey: string;
+  model: string;
 }
 
 export interface UserProfile {
@@ -34,7 +43,6 @@ export interface UserProfile {
   experience: WorkExperience[];
   education: Education[];
   skills: string[];
-  apiKey: string;
   resumes?: Resume[];
   resume?: string; // For migration from old structure
   settings: {
@@ -45,6 +53,9 @@ export interface UserProfile {
     lockoutDelay?: number;
     lastActiveTime?: number;
     passcode?: string; // Plaintext passcode, should be removed before saving
+    activeAiProviderId?: string;
+    apiProviders?: ApiProvider[];
+    activeResumeId?: string;
   };
 }
 
@@ -66,10 +77,12 @@ export const getUserProfile = (): Promise<UserProfile | null> => {
 
           // Migration logic for resumes
           if (profile.resume && (!profile.resumes || profile.resumes.length === 0)) {
+            const resumeText = atob(profile.resume.split(',')[1] || '');
             profile.resumes = [{
               id: new Date().toISOString(),
               name: 'Default Resume',
               data: profile.resume,
+              text: resumeText,
             }];
             delete profile.resume;
           } else if (!profile.resumes) {
@@ -78,7 +91,6 @@ export const getUserProfile = (): Promise<UserProfile | null> => {
 
           const decryptedProfile: UserProfile = {
             ...profile,
-            apiKey: profile.apiKey ? decryptData(profile.apiKey) : ''
           };
           resolve(decryptedProfile);
         } else {
@@ -92,9 +104,8 @@ export const getUserProfile = (): Promise<UserProfile | null> => {
         experience: [],
         education: [],
         skills: [],
-        apiKey: "",
         resumes: [],
-        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: '', lockoutDelay: 0, lastActiveTime: 0 },
+        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, passcodeHash: '', lockoutDelay: 0, lastActiveTime: 0, apiProviders: [] },
       });
     }
   });
@@ -115,7 +126,6 @@ export const saveUserProfile = (data: UserProfile): Promise<void> => {
 
       const encryptedProfile = {
         ...profileToSave,
-        apiKey: profileToSave.apiKey ? encryptData(profileToSave.apiKey) : ''
       };
 
       chrome.storage.local.set({ userProfile: encryptedProfile }, () => {

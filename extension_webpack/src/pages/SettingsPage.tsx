@@ -1,34 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getUserProfile, saveUserProfile, UserProfile } from '../services/storageService';
-import { FiSave, FiKey, FiToggleLeft, FiToggleRight, FiLock } from 'react-icons/fi';
+import { getUserProfile, saveUserProfile, UserProfile, ApiProvider } from '../services/storageService';
+import { listModels } from '../services/llmService';
+import { FiSave, FiKey, FiToggleLeft, FiToggleRight, FiLock, FiPlus, FiTrash2, FiCpu, FiDownloadCloud } from 'react-icons/fi';
 
 const SettingsPage: React.FC = () => {
-  const [apiKey, setApiKey] = useState("");
-  const [autoFillEnabled, setAutoFillEnabled] = useState(true);
-  const [aiRecommendationsEnabled, setAiRecommendationsEnabled] = useState(true);
-  const [passcodeEnabled, setPasscodeEnabled] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [passcode, setPasscode] = useState("");
   const [confirmPasscode, setConfirmPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState("");
-  const [lockoutDelay, setLockoutDelay] = useState(0);
+  const [modelLists, setModelLists] = useState<{[key: string]: string[]}>({});
 
   useEffect(() => {
-    getUserProfile().then(profile => {
-      if (profile) {
-        setApiKey(profile.apiKey || "");
-        setAutoFillEnabled(profile.settings?.autoFillEnabled ?? true);
-        setAiRecommendationsEnabled(profile.settings?.aiRecommendationsEnabled ?? true);
-        setPasscodeEnabled(profile.settings?.passcodeEnabled ?? false);
-        setLockoutDelay(profile.settings?.lockoutDelay ?? 0);
+    getUserProfile().then(p => {
+      if (p) {
+        if (!p.settings.apiProviders) p.settings.apiProviders = [];
+        if (!p.settings.activeAiProviderId && p.settings.apiProviders.length > 0) {
+          p.settings.activeAiProviderId = p.settings.apiProviders[0].id;
+        }
+        setProfile(p);
       }
     });
   }, []);
 
   const handleSave = () => {
-    getUserProfile().then(profile => {
-      let newPasscode;
-      if (passcodeEnabled) {
+    if (profile) {
+      let profileToSave = { ...profile };
+      if (profile.settings.passcodeEnabled) {
         if (passcode || confirmPasscode) {
           if (passcode.length !== 4 || confirmPasscode.length !== 4) {
             setPasscodeError("Passcode must be 4 digits.");
@@ -38,47 +36,74 @@ const SettingsPage: React.FC = () => {
             setPasscodeError("Passcodes do not match.");
             return;
           }
-          newPasscode = passcode;
+          profileToSave.settings.passcode = passcode;
         }
+      } else {
+        delete profileToSave.settings.passcode;
       }
 
-      const newProfile: UserProfile = {
-        ...(profile || {
-          personalInfo: { name: '', email: '', phone: '' },
-          experience: [],
-          education: [],
-          skills: [],
-          apiKey: '',
-          settings: {
-            autoFillEnabled: true,
-            aiRecommendationsEnabled: true,
-            passcodeEnabled: false,
-          }
-        }),
-        apiKey: apiKey || profile?.apiKey || '',
-        settings: {
-          ...(profile?.settings || {}),
-          autoFillEnabled,
-          aiRecommendationsEnabled,
-          passcodeEnabled,
-          passcode: newPasscode,
-          lockoutDelay,
-        }
-      };
-
-      if (!newPasscode) {
-        delete newProfile.settings.passcode;
-      }
-
-      saveUserProfile(newProfile).then(() => {
+      saveUserProfile(profileToSave).then(() => {
         alert("Settings saved!");
         setPasscode("");
         setConfirmPasscode("");
         setPasscodeError("");
       });
-    });
+    }
+  };
+
+  const handleProviderChange = (index: number, field: keyof ApiProvider, value: string) => {
+    if (profile) {
+      const newProviders = [...(profile.settings.apiProviders || [])];
+      newProviders[index] = { ...newProviders[index], [field]: value };
+      setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+    }
+  };
+
+  const addProvider = () => {
+    if (profile) {
+      const newProvider: ApiProvider = { id: new Date().toISOString(), name: 'OpenAI', model: 'gpt-4o-mini', apiKey: '' };
+      const newProviders = [...(profile.settings.apiProviders || []), newProvider];
+      setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+    }
+  };
+
+  const removeProvider = (index: number) => {
+    if (profile) {
+      const newProviders = [...(profile.settings.apiProviders || [])];
+      newProviders.splice(index, 1);
+      setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+    }
   };
   
+  const setActiveProvider = (id: string) => {
+    if (profile) {
+      setProfile({ ...profile, settings: { ...profile.settings, activeAiProviderId: id } });
+    }
+  };
+
+  const handleToggleChange = (field: keyof UserProfile['settings'], value: boolean) => {
+    if (profile) {
+      setProfile({ ...profile, settings: { ...profile.settings, [field]: value } });
+    }
+  };
+
+  const handleLockoutDelayChange = (value: number) => {
+    if (profile) {
+      setProfile({ ...profile, settings: { ...profile.settings, lockoutDelay: value } });
+    }
+  };
+
+  const handleFetchModels = async (provider: ApiProvider) => {
+    if (!provider.apiKey) {
+      alert("Please enter an API key first.");
+      return;
+    }
+    const models = await listModels(provider);
+    if (models) {
+      setModelLists(prev => ({ ...prev, [provider.id]: models }));
+    }
+  };
+
   const Toggle = ({ enabled, onChange, label, Icon }: { enabled: boolean, onChange: (enabled: boolean) => void, label: string, Icon: React.ElementType }) => (
     <div className="flex items-center justify-between">
       <label className="flex items-center text-lg text-slate-700">
@@ -91,36 +116,57 @@ const SettingsPage: React.FC = () => {
     </div>
   );
 
+  if (!profile) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="space-y-8">
       <h1 className="text-5xl font-bold text-slate-800">Settings</h1>
       
       <div className="p-8 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg space-y-6">
-        <div>
-          <label htmlFor="apiKey" className="flex items-center text-lg font-medium text-slate-700 mb-2">
-            <FiKey className="mr-3 text-slate-500" />
-            LLM API Key
-          </label>
-          <input
-            type="password"
-            id="apiKey"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="w-full p-3 bg-white/50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-            placeholder="Enter your API key"
-          />
-        </div>
+        <h2 className="text-3xl font-semibold text-slate-800 flex items-center"><FiKey className="mr-3 text-slate-500" />AI Provider Settings</h2>
+        
+        {profile.settings.apiProviders?.map((provider, index) => (
+          <div key={provider.id} className="p-4 border border-slate-200 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <select value={provider.name} onChange={(e) => handleProviderChange(index, 'name', e.target.value)} className="p-3 bg-white/50 border border-slate-300 rounded-xl">
+                <option value="OpenAI">OpenAI</option>
+                <option value="Gemini">Gemini</option>
+              </select>
+              <input type="password" placeholder="API Key" value={provider.apiKey} onChange={(e) => handleProviderChange(index, 'apiKey', e.target.value)} onBlur={() => handleFetchModels(provider)} className="p-3 bg-white/50 border border-slate-300 rounded-xl" />
+              <div className="col-span-2 flex items-center gap-2">
+                <select value={provider.model} onChange={(e) => handleProviderChange(index, 'model', e.target.value)} className="p-3 w-full bg-white/50 border border-slate-300 rounded-xl">
+                  {modelLists[provider.id] ? (
+                    modelLists[provider.id].map(model => <option key={model} value={model}>{model}</option>)
+                  ) : (
+                    <option value={provider.model}>{provider.model}</option>
+                  )}
+                </select>
+                <button onClick={() => handleFetchModels(provider)} className="p-3 bg-blue-500 text-white rounded-xl"><FiDownloadCloud /></button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <button onClick={() => setActiveProvider(provider.id)} disabled={profile.settings.activeAiProviderId === provider.id} className="text-sm text-blue-500 disabled:text-gray-400">
+                {profile.settings.activeAiProviderId === provider.id ? 'Active' : 'Set as Active'}
+              </button>
+              <button onClick={() => removeProvider(index)} className="text-red-500"><FiTrash2 /></button>
+            </div>
+          </div>
+        ))}
+        
+        <button onClick={addProvider} className="flex items-center text-blue-500"><FiPlus className="mr-2" />Add Provider</button>
         <hr className="border-slate-200" />
-        <Toggle enabled={autoFillEnabled} onChange={setAutoFillEnabled} label="Enable Auto-fill" Icon={FiToggleRight} />
+        <Toggle enabled={profile.settings.autoFillEnabled} onChange={(val) => handleToggleChange('autoFillEnabled', val)} label="Enable Auto-fill" Icon={FiToggleRight} />
         <hr className="border-slate-200" />
-        <Toggle enabled={aiRecommendationsEnabled} onChange={setAiRecommendationsEnabled} label="Enable AI Recommendations" Icon={FiToggleRight} />
+        <Toggle enabled={profile.settings.aiRecommendationsEnabled} onChange={(val) => handleToggleChange('aiRecommendationsEnabled', val)} label="Enable AI Recommendations" Icon={FiToggleRight} />
       </div>
 
       <div className="p-8 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg space-y-6">
         <h2 className="text-3xl font-semibold text-slate-800 flex items-center"><FiLock className="mr-3 text-slate-500" />Passcode Settings</h2>
-        <Toggle enabled={passcodeEnabled} onChange={setPasscodeEnabled} label="Enable Passcode" Icon={passcodeEnabled ? FiToggleRight : FiToggleLeft} />
+        <Toggle enabled={profile.settings.passcodeEnabled} onChange={(val) => handleToggleChange('passcodeEnabled', val)} label="Enable Passcode" Icon={profile.settings.passcodeEnabled ? FiToggleRight : FiToggleLeft} />
         
-        {passcodeEnabled && (
+        {profile.settings.passcodeEnabled && (
           <div className="space-y-4 pt-4 border-t border-slate-200">
             <div>
               <label htmlFor="passcode" className="block text-sm font-medium text-slate-700">New Passcode (4 digits):</label>
@@ -148,8 +194,8 @@ const SettingsPage: React.FC = () => {
               <label htmlFor="lockoutDelay" className="block text-sm font-medium text-slate-700">Lock after inactivity:</label>
               <select
                 id="lockoutDelay"
-                value={lockoutDelay}
-                onChange={(e) => setLockoutDelay(Number(e.target.value))}
+                value={profile.settings.lockoutDelay}
+                onChange={(e) => handleLockoutDelayChange(Number(e.target.value))}
                 className="mt-1 w-full p-3 bg-white/50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all duration-200"
               >
                 <option value={0}>Immediately</option>

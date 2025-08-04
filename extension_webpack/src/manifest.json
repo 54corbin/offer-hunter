@@ -8,6 +8,20 @@
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "https://www.seek.com.au/*",
+    "https://www.linkedin.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.seek.com.au/*"],
+      "js": ["seek.bundle.js"]
+    },
+    {
+      "matches": ["https://www.linkedin.com/jobs/search/*"],
+      "js": ["linkedin.bundle.js"]
+    }
+  ],
   "background": {
     "service_worker": "background.bundle.js"
   },

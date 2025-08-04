@@ -1,28 +1,56 @@
-import { getUserProfile, UserProfile } from './storageService';
+import { getUserProfile, UserProfile, ApiProvider } from './storageService';
+import OpenAI from 'openai';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
-export const generateContent = async (prompt: string): Promise<string | null> => {
+type Headers = {
+  [key: string]: string;
+};
+
+const getLlmApiCallConfig = async () => {
   const profile = await getUserProfile();
-  const apiKey = profile?.apiKey;
+  const activeProviderId = profile?.settings?.activeAiProviderId;
+  const provider = profile?.settings?.apiProviders?.find(p => p.id === activeProviderId);
 
-  if (!apiKey) {
-    console.error("LLM API key not found.");
+  if (!provider || !provider.apiKey) {
+    console.error("Active AI provider or API key not found.");
     return null;
   }
 
+  if (provider.name === 'Gemini') {
+    return {
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`,
+      headers: { 'Content-Type': 'application/json' },
+      provider: 'gemini',
+    };
+  }
+
+  // Default to OpenAI
+  return {
+    url: OPENAI_API_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${provider.apiKey}`,
+    },
+    model: provider.model,
+    provider: 'openai',
+  };
+};
+
+export const generateContent = async (prompt: string): Promise<string | null> => {
+  const config = await getLlmApiCallConfig();
+  if (!config) return null;
+
+  const body = config.provider === 'gemini'
+    ? { contents: [{ parts: [{ text: prompt }] }] }
+    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 };
+
   try {
-    const response = await fetch(OPENAI_API_URL, {
+    const response = await fetch(config.url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-      }),
+      headers: config.headers as Headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -32,6 +60,9 @@ export const generateContent = async (prompt: string): Promise<string | null> =>
     }
 
     const data = await response.json();
+    if (config.provider === 'gemini') {
+      return data.candidates[0]?.content.parts[0].text || null;
+    }
     return data.choices[0]?.message?.content || null;
   } catch (error) {
     console.error("Error calling LLM API:", error);
@@ -39,20 +70,17 @@ export const generateContent = async (prompt: string): Promise<string | null> =>
   }
 };
 
-export const getRelevanceScore = async (profile: UserProfile, jobDetails: any): Promise<{score: number, summary: string} | null> => {
-  const apiKey = profile?.apiKey;
+export const getMatchScore = async (jobDetails: any, resumeText: string): Promise<{score: number, summary: string} | null> => {
+  const config = await getLlmApiCallConfig();
+  if (!config) return null;
 
-  if (!apiKey) {
-    console.error("LLM API key not found.");
-    return null;
-  }
-
+  const truncatedResumeText = resumeText.substring(0, 4000);
   const prompt = `
-    You are a professional recruiter. Analyze the following user profile and job description, and return a relevance score from 1 to 100, where 100 is a perfect match. Also, provide a brief summary of why it is a match or not. Your response must be a JSON object with the keys "score" and "summary".
+    You are a professional recruiter. Analyze the following resume and job description, and return a relevance score from 1 to 100, where 100 is a perfect match. Also, provide a brief summary of why it is a match or not. Your response must be a JSON object with the keys "score" and "summary".
 
-    User Profile:
+    Resume:
     ---
-    ${JSON.stringify(profile, null, 2)}
+    ${truncatedResumeText}
     ---
 
     Job Description:
@@ -61,18 +89,15 @@ export const getRelevanceScore = async (profile: UserProfile, jobDetails: any): 
     ---
   `;
 
+  const body = config.provider === 'gemini'
+    ? { contents: [{ parts: [{ text: prompt }] }] }
+    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 };
+
   try {
-    const response = await fetch(OPENAI_API_URL, {
+    const response = await fetch(config.url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-      }),
+      headers: config.headers as Headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -82,7 +107,9 @@ export const getRelevanceScore = async (profile: UserProfile, jobDetails: any): 
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    const content = config.provider === 'gemini'
+      ? data.candidates[0]?.content.parts[0].text
+      : data.choices[0]?.message?.content;
 
     if (content) {
       try {
@@ -102,46 +129,21 @@ export const getRelevanceScore = async (profile: UserProfile, jobDetails: any): 
     console.error("Error calling LLM API:", error);
     return null;
   }
-};
+}
 
-export const extractProfileFromResume = async (resumeText: string): Promise<UserProfile | null> => {
-  const profile = await getUserProfile();
-  const apiKey = profile?.apiKey;
-
-  if (!apiKey) {
-    console.error("LLM API key not found.");
-    return null;
-  }
+export const extractProfileFromResume = async (resumeText: string): Promise<Partial<UserProfile> | null> => {
+  const config = await getLlmApiCallConfig();
+  if (!config) return null;
 
   const sanitizedResumeText = resumeText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
-  console.log("Sanitized resume text:", sanitizedResumeText);
 
   const prompt = `
     You are an expert HR data extractor. Based on the following resume text, extract the user's professional information and return it as a JSON object. The JSON object must strictly adhere to the following schema:
 
     {
-      "personalInfo": {
-        "name": "string",
-        "email": "string",
-        "phone": "string"
-      },
-      "experience": [
-        {
-          "company": "string",
-          "title": "string",
-          "startDate": "string",
-          "endDate": "string",
-          "responsibilities": ["string"]
-        }
-      ],
-      "education": [
-        {
-          "institution": "string",
-          "degree": "string",
-          "fieldOfStudy": "string",
-          "graduationDate": "string"
-        }
-      ],
+      "personalInfo": { "name": "string", "email": "string", "phone": "string" },
+      "experience": [ { "company": "string", "title": "string", "startDate": "string", "endDate": "string", "summary": "string", "responsibilities": ["string"] } ],
+      "education": [ { "institution": "string", "degree": "string", "fieldOfStudy": "string", "graduationDate": "string" } ],
       "skills": ["string"]
     }
 
@@ -155,18 +157,15 @@ export const extractProfileFromResume = async (resumeText: string): Promise<User
     ---
   `;
 
+  const body = config.provider === 'gemini'
+    ? { contents: [{ parts: [{ text: prompt }] }] }
+    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 };
+
   try {
-    const response = await fetch(OPENAI_API_URL, {
+    const response = await fetch(config.url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-      }),
+      headers: config.headers as Headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -176,21 +175,18 @@ export const extractProfileFromResume = async (resumeText: string): Promise<User
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-    console.log("LLM response content:", content);
+    const content = config.provider === 'gemini'
+      ? data.candidates[0]?.content.parts[0].text
+      : data.choices[0]?.message?.content;
 
     if (content) {
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       const jsonString = jsonMatch ? jsonMatch[1] : content;
-      console.log("JSON string to parse:", jsonString);
       
       try {
-        const parsedProfile = JSON.parse(jsonString);
-        console.log("Parsed profile:", parsedProfile);
-        return parsedProfile;
+        return JSON.parse(jsonString);
       } catch (e) {
         console.error("Failed to parse LLM response JSON:", e);
-        console.error("Invalid JSON string:", jsonString);
         return null;
       }
     } else {
@@ -201,4 +197,53 @@ export const extractProfileFromResume = async (resumeText: string): Promise<User
     console.error("Error calling LLM API:", error);
     return null;
   }
+};
+
+export const listModels = async (provider: ApiProvider): Promise<string[] | null> => {
+  if (provider.name === 'Gemini') {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${provider.apiKey}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.models.map((m: any) => m.name.replace('models/', '')).filter((m: string) => m.includes('gemini'));
+    } catch (error) {
+      console.error("Error fetching Gemini models:", error);
+      return null;
+    }
+  } else { // OpenAI
+    try {
+      const openai = new OpenAI({ apiKey: provider.apiKey, dangerouslyAllowBrowser: true });
+      const models = await openai.models.list();
+      return models.data.map(m => m.id).filter(id => id.includes('gpt'));
+    } catch (error) {
+      console.error("Error fetching OpenAI models:", error);
+      return null;
+    }
+  }
+};
+
+export const extractKeywordsFromResume = async (resumeText: string): Promise<string[] | null> => {
+  const prompt = `
+    Based on the following resume text, extract the most relevant keywords for a job search.
+    Return a JSON array of 5-10 strings.
+
+    Resume Text:
+    ---
+    ${resumeText.substring(0, 4000)}
+    ---
+  `;
+
+  const content = await generateContent(prompt);
+  if (content) {
+    try {
+      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+      let jsonString = jsonMatch ? jsonMatch[1] : content;
+      jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(jsonString);
+    } catch (e) {
+      console.error("Failed to parse keywords from LLM response:", e);
+      return null;
+    }
+  }
+  return null;
 };

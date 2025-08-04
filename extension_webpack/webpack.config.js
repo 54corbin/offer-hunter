@@ -10,6 +10,8 @@ module.exports = (env, argv) => {
     entry: {
       main: './src/index.tsx',
       background: './src/background/background.ts',
+      seek: './src/content-scripts/seek.ts',
+      linkedin: './src/content-scripts/linkedin.ts',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -60,6 +62,10 @@ module.exports = (env, argv) => {
           {
             from: path.resolve(__dirname, 'src/assets'),
             to: path.resolve(__dirname, 'dist'),
+          },
+          {
+            from: path.resolve(__dirname, 'src/scripts'),
+            to: path.resolve(__dirname, 'dist/scripts'),
           }
         ],
       }),

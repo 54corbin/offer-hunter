@@ -3,11 +3,18 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Header from '../components/ui/Header';
+import { FiHome, FiUser, FiSettings } from 'react-icons/fi';
+
+const mockNavigation = [
+  { name: 'Home', href: '#', icon: FiHome },
+  { name: 'Profile', href: '#', icon: FiUser },
+  { name: 'Settings', href: '#', icon: FiSettings },
+];
 
 const DesignSystemPage: React.FC = () => {
   return (
     <div className="p-8 space-y-8">
-      <Header title="Design System" />
+      <Header title="Design System" navigation={mockNavigation} />
 
       <Card className="p-6">
         <h2 className="text-xl font-bold mb-4">Buttons</h2>

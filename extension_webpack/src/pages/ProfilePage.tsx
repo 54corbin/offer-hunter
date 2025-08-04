@@ -8,12 +8,12 @@ const defaultProfile: UserProfile = {
   experience: [],
   education: [],
   skills: [],
-  apiKey: '',
   resumes: [],
   settings: {
     autoFillEnabled: true,
     aiRecommendationsEnabled: true,
     passcodeEnabled: false,
+    apiProviders: [],
   }
 };
 
@@ -111,16 +111,21 @@ const ProfilePage: React.FC = () => {
         <h3 className="text-2xl font-semibold mb-4 text-slate-700">Work Experience</h3>
         <div className="space-y-4">
           {profile.experience?.map((exp, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
-              <div className="relative col-span-3">
-                <FiBriefcase className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                <input type="text" placeholder="Company" value={exp.company || ''} onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'company')} className="pl-10 p-3 w-full bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200" />
+            <div key={index} className="p-4 border border-slate-200 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
+                <div className="relative col-span-3">
+                  <FiBriefcase className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                  <input type="text" placeholder="Company" value={exp.company || ''} onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'company')} className="pl-10 p-3 w-full bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200" />
+                </div>
+                <div className="relative col-span-3">
+                  <FiAward className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                  <input type="text" placeholder="Title" value={exp.title || ''} onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'title')} className="pl-10 p-3 w-full bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200" />
+                </div>
+                <button onClick={() => removeEntry('experience', index)} className="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition-colors flex justify-center items-center shadow-md"><FiTrash2 /></button>
               </div>
-              <div className="relative col-span-3">
-                <FiAward className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                <input type="text" placeholder="Title" value={exp.title || ''} onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'title')} className="pl-10 p-3 w-full bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200" />
+              <div className="mt-4">
+                <textarea placeholder="Summary of your role and achievements..." value={exp.summary || ''} onChange={(e) => handleInputChange(e.target.value, 'experience', index, 'summary')} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200" rows={3} />
               </div>
-              <button onClick={() => removeEntry('experience', index)} className="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition-colors flex justify-center items-center shadow-md"><FiTrash2 /></button>
             </div>
           ))}
         </div>
