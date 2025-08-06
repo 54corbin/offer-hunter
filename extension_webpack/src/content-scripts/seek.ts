@@ -6,15 +6,19 @@ function scrapeSeekJobs() {
     const titleElement = article.querySelector('a[data-automation="jobTitle"]');
     const companyElement = article.querySelector('a[data-automation="jobCompany"]');
     const descriptionElement = article.querySelector('span[data-automation="jobShortDescription"]');
-    
+    const salaryElement = article.querySelector('span[data-automation="jobSalary"]');
+    const locationElement = article.querySelector('a[data-automation="jobLocation"]');
+
     if (titleElement && companyElement && descriptionElement) {
       const title = titleElement.textContent?.trim();
       const company = companyElement.textContent?.trim();
       const description = descriptionElement.textContent?.trim();
       const url = (titleElement as HTMLAnchorElement).href;
+      const salary = salaryElement?.textContent?.trim() || null;
+      const location = locationElement?.textContent?.trim() || null;
 
       if (title && company && description && url) {
-        jobs.push({ title, company, description, url, source: 'seek' });
+        jobs.push({ title, company, description, url, salary, location, source: 'seek' });
       }
     }
   });

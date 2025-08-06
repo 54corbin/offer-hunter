@@ -247,3 +247,34 @@ export const extractKeywordsFromResume = async (resumeText: string): Promise<str
   }
   return null;
 };
+
+export const generateAnswerForQuestion = async (
+  question: string,
+  jobDescription: string,
+  resumeText: string
+): Promise<string | null> => {
+  const prompt = `
+    You are a professional career coach helping a candidate apply for a job.
+    Your task is to answer an application question based on the candidate's resume and the job description.
+    Craft a concise, compelling, and professional answer (2-4 sentences) that directly addresses the question, highlighting the candidate's most relevant skills and experience.
+
+    **Candidate's Resume:**
+    ---
+    ${resumeText.substring(0, 3000)}
+    ---
+
+    **Job Description:**
+    ---
+    ${jobDescription.substring(0, 3000)}
+    ---
+
+    **Application Question:**
+    ---
+    ${question}
+    ---
+
+    **Answer:**
+  `;
+
+  return await generateContent(prompt);
+};

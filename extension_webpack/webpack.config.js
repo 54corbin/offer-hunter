@@ -12,6 +12,8 @@ module.exports = (env, argv) => {
       background: './src/background/background.ts',
       seek: './src/content-scripts/seek.ts',
       linkedin: './src/content-scripts/linkedin.ts',
+      autofill: './src/content-scripts/autofill.ts',
+      popup: './src/popup.ts',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -49,6 +51,12 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/index.html',
         filename: 'index.html',
+        chunks: ['main'],
+      }),
+      new HtmlWebpackPlugin({
+        template: './src/popup.html',
+        filename: 'popup.html',
+        chunks: ['popup'],
       }),
       new MiniCssExtractPlugin({
         filename: 'style.css',
