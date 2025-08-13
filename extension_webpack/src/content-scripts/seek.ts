@@ -1,6 +1,12 @@
 console.log("Seek content script loaded.");
 
+let currentResumeId: string | null = null;
+
 function scrapeSeekJobs() {
+  if (!currentResumeId) {
+    console.error("No resumeId provided to the scraper.");
+    return;
+  }
   const jobs: any[] = [];
   document.querySelectorAll('article').forEach(article => {
     const titleElement = article.querySelector('a[data-automation="jobTitle"]');
@@ -24,9 +30,13 @@ function scrapeSeekJobs() {
   });
   
   if (jobs.length > 0) {
-    chrome.runtime.sendMessage({ type: "SCRAPED_JOB_DATA", data: jobs });
+    chrome.runtime.sendMessage({ type: "SCRAPED_JOB_DATA", data: jobs, resumeId: currentResumeId });
   }
 }
 
-// Run the scraper
-scrapeSeekJobs();
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "INITIATE_SCRAPE") {
+    currentResumeId = message.resumeId;
+    scrapeSeekJobs();
+  }
+});

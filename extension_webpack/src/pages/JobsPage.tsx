@@ -1,75 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign, FiChevronDown } from 'react-icons/fi';
-import { getUserProfile, saveUserProfile, UserProfile, Resume } from '../services/storageService';
+import React, { useEffect, useState, useCallback } from 'react';
+import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign } from 'react-icons/fi';
+import { getUserProfile, UserProfile, Resume, getJobsForResume } from '../services/storageService';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 const JobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isReScoring, setIsReScoring] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const fetchJobs = () => {
-    if (typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.storage.local) {
-      window.chrome.storage.local.get({ recommendedJobs: [] }, (result) => {
-        setJobs(result.recommendedJobs.sort((a: any, b: any) => b.score - a.score));
-      });
-    }
-  };
+  const fetchJobsForTab = useCallback(async (resumeId: string) => {
+    const jobsForResume = await getJobsForResume(resumeId);
+    setJobs(jobsForResume.sort((a, b) => b.score - a.score));
+  }, []);
 
   useEffect(() => {
-    fetchJobs();
-    getUserProfile().then(setProfile);
+    getUserProfile().then(profile => {
+      setProfile(profile);
+      const firstResumeId = profile?.resumes?.[0]?.id;
+      if (firstResumeId) {
+        setSelectedResumeId(firstResumeId);
+        fetchJobsForTab(firstResumeId);
+      }
+    });
 
     const messageListener = (message: any) => {
       if (message.type === "JOB_MATCHING_PROGRESS") {
+        setIsLoading(true);
         setProgress(message.progress);
       } else if (message.type === "JOB_MATCHING_COMPLETE") {
         setIsLoading(false);
         setProgress(0);
-        fetchJobs(); // Refetch jobs to update the list
-      } else if (message.type === "RE_SCORE_COMPLETE") {
-        setIsReScoring(false);
-        fetchJobs(); // Refetch jobs to show new scores
+        if (selectedResumeId) {
+          fetchJobsForTab(selectedResumeId);
+        }
       }
     };
     chrome.runtime.onMessage.addListener(messageListener);
     return () => chrome.runtime.onMessage.removeListener(messageListener);
-  }, []);
+  }, [selectedResumeId, fetchJobsForTab]);
 
   const handleDiscoverJobs = () => {
-    if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
+    if (selectedResumeId) {
       setIsLoading(true);
       setProgress(0);
-      window.chrome.runtime.sendMessage({ type: "FETCH_JOBS_FROM_SEEK" });
+      chrome.runtime.sendMessage({ 
+        type: "FETCH_JOBS_FROM_SEEK",
+        resumeId: selectedResumeId 
+      });
     }
   };
 
   const handleCancel = () => {
     setIsLoading(false);
-    if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
-      window.chrome.runtime.sendMessage({ type: "CANCEL_JOB_FETCH" });
-    }
+    chrome.runtime.sendMessage({ type: "CANCEL_JOB_FETCH" });
   };
 
-  const handleResumeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newActiveResumeId = e.target.value;
-    if (profile) {
-      setIsReScoring(true);
-      const updatedProfile = {
-        ...profile,
-        settings: {
-          ...profile.settings,
-          activeResumeId: newActiveResumeId,
-        },
-      };
-      await saveUserProfile(updatedProfile);
-      setProfile(updatedProfile); // Update local state immediately
-
-      // Ask background to re-score jobs with the new active resume
-      window.chrome.runtime.sendMessage({ type: "RE_SCORE_JOBS" });
-    }
+  const handleResumeTabClick = (resumeId: string) => {
+    setSelectedResumeId(resumeId);
+    fetchJobsForTab(resumeId);
   };
 
   const getScoreColor = (score: number) => {
@@ -80,34 +70,36 @@ const JobsPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {(isLoading || isReScoring) && <LoadingOverlay progress={progress} onCancel={handleCancel} />}
+      {isLoading && <LoadingOverlay progress={progress} onCancel={handleCancel} />}
       <div className="flex justify-between items-center">
         <h2 className="text-5xl font-bold text-slate-800">Recommended Jobs</h2>
-        <button 
-          onClick={handleDiscoverJobs}
-          className="flex items-center bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105"
-        >
-          <FiSearch className="mr-2" />
-          Find Jobs on Seek.com.au
-        </button>
       </div>
 
       {profile && profile.resumes && profile.resumes.length > 0 && (
-        <div className="flex items-center space-x-4 bg-white p-4 rounded-lg shadow-md">
-          <label htmlFor="resume-select" className="font-semibold text-gray-700">Active Resume:</label>
-          <div className="relative">
-            <select
-              id="resume-select"
-              value={profile.settings.activeResumeId || ''}
-              onChange={handleResumeChange}
-              className="appearance-none bg-gray-100 border border-gray-300 rounded-md py-2 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 items-center" aria-label="Tabs">
+            {profile.resumes.map((resume) => (
+              <button
+                key={resume.id}
+                onClick={() => handleResumeTabClick(resume.id)}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  selectedResumeId === resume.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {resume.name}
+              </button>
+            ))}
+            <button 
+              onClick={handleDiscoverJobs}
+              className="ml-auto flex items-center bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+              disabled={!selectedResumeId}
             >
-              {profile.resumes.map(resume => (
-                <option key={resume.id} value={resume.id}>{resume.name}</option>
-              ))}
-            </select>
-            <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-          </div>
+              <FiSearch className="mr-2" />
+              Find New Jobs
+            </button>
+          </nav>
         </div>
       )}
       
@@ -119,18 +111,8 @@ const JobsPage: React.FC = () => {
                 <p className="text-xl font-bold text-gray-800 truncate">{job.title}</p>
                 <p className="text-gray-600 mt-1">{job.company}</p>
                 <div className="space-y-2 mt-4 text-sm text-gray-500">
-                  {job.location && (
-                    <div className="flex items-center">
-                      <FiMapPin className="mr-2 flex-shrink-0" />
-                      <span>{job.location}</span>
-                    </div>
-                  )}
-                  {job.salary && (
-                    <div className="flex items-center">
-                      <FiDollarSign className="mr-2 flex-shrink-0" />
-                      <span>{job.salary}</span>
-                    </div>
-                  )}
+                  {job.location && ( <div className="flex items-center"> <FiMapPin className="mr-2 flex-shrink-0" /> <span>{job.location}</span> </div> )}
+                  {job.salary && ( <div className="flex items-center"> <FiDollarSign className="mr-2 flex-shrink-0" /> <span>{job.salary}</span> </div> )}
                 </div>
                 <p className="text-sm text-gray-600 mt-4 h-16 overflow-hidden text-ellipsis">{job.summary || 'No summary available.'}</p>
               </div>
@@ -140,13 +122,7 @@ const JobsPage: React.FC = () => {
                   <span className="text-xs text-gray-500">Match Score</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <a 
-                    href={job.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-semibold p-2 rounded-md hover:bg-blue-100 transition-colors"
-                    title="View Job Posting"
-                  >
+                  <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-semibold p-2 rounded-md hover:bg-blue-100 transition-colors" title="View Job Posting">
                     <FiExternalLink size={20} />
                   </a>
                 </div>
@@ -156,8 +132,8 @@ const JobsPage: React.FC = () => {
         </div>
       ) : (
         <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
-          <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs yet.</h3>
-          <p className="mt-2 text-slate-500">Click the button above to find jobs on Seek.com.au.</p>
+          <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs for this resume.</h3>
+          <p className="mt-2 text-slate-500">Click "Find New Jobs" to start a search.</p>
         </div>
       )}
     </div>

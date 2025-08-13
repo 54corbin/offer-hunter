@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile, Resume, saveUserProfile } from '../services/storageService';
 import { extractProfileFromResume } from '../services/llmService';
-import { FiUpload, FiEdit, FiTrash2, FiSave, FiXCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiUpload, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
 
 declare global {
   interface Window {
@@ -58,7 +58,6 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
           };
           document.body.appendChild(script);
         } else {
-          // For other file types, just store the file
           processResume(file, fileData, '');
         }
       }
@@ -119,12 +118,6 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
     }
   };
 
-  const handleSetActive = async (resumeId: string) => {
-    const updatedProfile = { ...profile, settings: { ...profile.settings, activeResumeId: resumeId } };
-    onProfileUpdate(updatedProfile);
-    await saveUserProfile(updatedProfile);
-  };
-
   return (
     <section className="p-6 bg-white rounded-2xl shadow-lg">
       <h3 className="text-2xl font-semibold mb-4 text-slate-700">Manage Resumes</h3>
@@ -137,7 +130,7 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
       </div>
       <div className="space-y-2">
         {profile.resumes?.map(resume => (
-          <div key={resume.id} className={`flex items-center justify-between p-2 rounded-lg ${profile.settings.activeResumeId === resume.id ? 'bg-green-100' : 'bg-slate-50'}`}>
+          <div key={resume.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
             {editingResumeId === resume.id ? (
               <input
                 type="text"
@@ -151,14 +144,11 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
             <div className="flex items-center space-x-4">
               {editingResumeId === resume.id ? (
                 <>
-                  <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-700"><FiSave size={20} /></button>
+                  <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-70Ã00"><FiSave size={20} /></button>
                   <button onClick={() => setEditingResumeId(null)} className="p-2 text-red-500 hover:text-red-700"><FiXCircle size={20} /></button>
                 </>
               ) : (
                 <>
-                  {profile.settings.activeResumeId !== resume.id && (
-                    <button onClick={() => handleSetActive(resume.id)} className="p-2 text-gray-500 hover:text-gray-700"><FiCheckCircle size={20} /></button>
-                  )}
                   <button onClick={() => handleRename(resume)} className="p-2 text-blue-500 hover:text-blue-700"><FiEdit size={20} /></button>
                 </>
               )}
