@@ -66,14 +66,15 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
   };
 
   const processResume = async (file: File, fileData: string, text: string) => {
+    const extractedProfile = await extractProfileFromResume(text);
+
     const newResume: Resume = {
       id: new Date().toISOString(),
       name: file.name,
       data: fileData,
       text: text,
+      parsedInfo: extractedProfile || undefined,
     };
-
-    const extractedProfile = await extractProfileFromResume(text);
     
     let updatedProfile = { ...profile };
     if (extractedProfile) {
@@ -109,6 +110,36 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
     setNewName('');
   };
 
+  const handleSelectResume = async (resumeId: string) => {
+    const selectedResume = profile.resumes?.find(r => r.id === resumeId);
+    if (selectedResume) {
+      let extractedProfile = selectedResume.parsedInfo;
+      let profileToUpdate = { ...profile };
+
+      if (!extractedProfile) {
+        const parsed = await extractProfileFromResume(selectedResume.text);
+        extractedProfile = parsed || undefined;
+        const updatedResumes = profile.resumes?.map(r => 
+          r.id === resumeId ? { ...r, parsedInfo: extractedProfile } : r
+        );
+        profileToUpdate = { ...profile, resumes: updatedResumes };
+      }
+
+      let finalProfile = { ...profileToUpdate, settings: { ...profileToUpdate.settings, activeResumeId: resumeId } };
+      if (extractedProfile) {
+        finalProfile = {
+          ...finalProfile,
+          personalInfo: extractedProfile.personalInfo || finalProfile.personalInfo,
+          experience: extractedProfile.experience || finalProfile.experience,
+          education: extractedProfile.education || finalProfile.education,
+          skills: extractedProfile.skills || finalProfile.skills,
+        };
+      }
+      onProfileUpdate(finalProfile);
+      await saveUserProfile(finalProfile);
+    }
+  };
+
   const handleDelete = async (resumeId: string) => {
     if (window.confirm('Are you sure you want to delete this resume?')) {
       const updatedResumes = profile.resumes?.filter(r => r.id !== resumeId);
@@ -139,12 +170,24 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
                 className="p-1 border border-slate-300 rounded-lg"
               />
             ) : (
-              <span className="text-slate-700">{resume.name}</span>
+              <>
+                <span className="text-slate-700">{resume.name}</span>
+                {profile.settings.activeResumeId === resume.id && (
+                  <span className="ml-2 px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Default</span>
+                )}
+              </>
             )}
             <div className="flex items-center space-x-4">
+              <input
+                type="radio"
+                name="selectedResume"
+                checked={profile.settings.activeResumeId === resume.id}
+                onChange={() => handleSelectResume(resume.id)}
+                className="form-radio h-5 w-5 text-blue-600"
+              />
               {editingResumeId === resume.id ? (
                 <>
-                  <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-70Ã00"><FiSave size={20} /></button>
+                  <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-700"><FiSave size={20} /></button>
                   <button onClick={() => setEditingResumeId(null)} className="p-2 text-red-500 hover:text-red-700"><FiXCircle size={20} /></button>
                 </>
               ) : (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign } from 'react-icons/fi';
+import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign, FiFileText } from 'react-icons/fi';
 import { getUserProfile, UserProfile, Resume, getJobsForResume } from '../services/storageService';
 import LoadingOverlay from '../components/LoadingOverlay';
 
@@ -18,10 +18,12 @@ const JobsPage: React.FC = () => {
   useEffect(() => {
     getUserProfile().then(profile => {
       setProfile(profile);
+      const activeResumeId = profile?.settings?.activeResumeId;
       const firstResumeId = profile?.resumes?.[0]?.id;
-      if (firstResumeId) {
-        setSelectedResumeId(firstResumeId);
-        fetchJobsForTab(firstResumeId);
+      const initialResumeId = activeResumeId || firstResumeId;
+      if (initialResumeId) {
+        setSelectedResumeId(initialResumeId);
+        fetchJobsForTab(initialResumeId);
       }
     });
 
@@ -39,7 +41,7 @@ const JobsPage: React.FC = () => {
     };
     chrome.runtime.onMessage.addListener(messageListener);
     return () => chrome.runtime.onMessage.removeListener(messageListener);
-  }, [selectedResumeId, fetchJobsForTab]);
+  }, [fetchJobsForTab]);
 
   const handleDiscoverJobs = () => {
     if (selectedResumeId) {
@@ -55,6 +57,16 @@ const JobsPage: React.FC = () => {
   const handleCancel = () => {
     setIsLoading(false);
     chrome.runtime.sendMessage({ type: "CANCEL_JOB_FETCH" });
+  };
+
+  const handleGenerateResume = (job: any) => {
+    if (selectedResumeId) {
+      chrome.runtime.sendMessage({
+        type: "GENERATE_RESUME_FOR_JOB",
+        job,
+        resumeId: selectedResumeId,
+      });
+    }
   };
 
   const handleResumeTabClick = (resumeId: string) => {
@@ -125,6 +137,9 @@ const JobsPage: React.FC = () => {
                   <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-semibold p-2 rounded-md hover:bg-blue-100 transition-colors" title="View Job Posting">
                     <FiExternalLink size={20} />
                   </a>
+                  <button onClick={() => handleGenerateResume(job)} className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-semibold p-2 rounded-md hover:bg-blue-100 transition-colors" title="Generate tailored resume">
+                    <FiFileText size={20} />
+                  </button>
                 </div>
               </div>
             </div>

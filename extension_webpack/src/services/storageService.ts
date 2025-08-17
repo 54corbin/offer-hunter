@@ -29,6 +29,12 @@ export interface Resume {
   name: string;
   data: string; // Base64 encoded resume data
   text: string; // Extracted plain text
+  parsedInfo?: {
+    personalInfo?: PersonalInfo;
+    experience?: WorkExperience[];
+    education?: Education[];
+    skills?: string[];
+  };
 }
 
 export interface ApiProvider {
@@ -54,7 +60,7 @@ export interface UserProfile {
     passcode?: string; // Plaintext passcode, should be removed before saving
     activeAiProviderId?: string;
     apiProviders?: ApiProvider[];
-    // activeResumeId is no longer needed
+    activeResumeId?: string;
   };
 }
 
@@ -70,18 +76,6 @@ export const getUserProfile = (): Promise<UserProfile | null> => {
           // Ensure resumes array exists
           if (!profile.resumes) {
             profile.resumes = [];
-          }
-          
-          // Clean up obsolete fields from old versions for hygiene
-          // @ts-ignore
-          if (profile.settings.activeResumeId) {
-            // @ts-ignore
-            delete profile.settings.activeResumeId;
-          }
-          // @ts-ignore
-          if (profile.resume) {
-            // @ts-ignore
-            delete profile.resume;
           }
 
           resolve(profile);
@@ -115,8 +109,6 @@ export const saveUserProfile = (data: UserProfile): Promise<void> => {
         delete profileToSave.settings.passcodeHash;
       }
       delete profileToSave.settings.passcode;
-      // @ts-ignore
-      delete profileToSave.settings.activeResumeId; // Ensure old field is not saved
 
       chrome.storage.local.set({ userProfile: profileToSave }, () => {
         resolve();

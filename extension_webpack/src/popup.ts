@@ -1,4 +1,4 @@
-import { getUserProfile } from './services/storageService';
+import { getUserProfile, saveUserProfile } from './services/storageService';
 
 const setupResumeSelector = async () => {
     const autofillPageBtn = document.getElementById('autofill-page');
@@ -6,6 +6,9 @@ const setupResumeSelector = async () => {
 
     const profile = await getUserProfile();
     if (profile && profile.resumes && resumeSelect) {
+        // Clear existing options
+        resumeSelect.innerHTML = '';
+
         if (profile.resumes.length > 0) {
             profile.resumes.forEach(resume => {
                 const option = document.createElement('option');
@@ -13,6 +16,12 @@ const setupResumeSelector = async () => {
                 option.textContent = resume.name;
                 resumeSelect.appendChild(option);
             });
+
+            // Set the selected option to the active resume
+            if (profile.settings.activeResumeId) {
+                resumeSelect.value = profile.settings.activeResumeId;
+            }
+
         } else {
             const option = document.createElement('option');
             option.textContent = 'No resumes found';
@@ -42,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedResumeId = resumeSelect.value;
 
             if (tab && tab.id && selectedResumeId) {
+                // Save the selected resume ID as the active one
+                const profile = await getUserProfile();
+                if (profile) {
+                    profile.settings.activeResumeId = selectedResumeId;
+                    await saveUserProfile(profile);
+                }
+
                 chrome.runtime.sendMessage({ 
                     type: 'TRIGGER_AUTOFILL', 
                     tabId: tab.id,
@@ -54,4 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Populate the dropdown asynchronously
     setupResumeSelector();
+
+    // Listen for changes in storage to keep the dropdown in sync
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && changes.userProfile) {
+            console.log('User profile changed, updating resume selector.');
+            setupResumeSelector();
+        }
+    });
 });

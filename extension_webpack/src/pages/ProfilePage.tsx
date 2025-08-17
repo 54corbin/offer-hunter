@@ -37,7 +37,7 @@ const ProfilePage: React.FC = () => {
   }, []);
 
   const handleProfileUpdate = (updatedProfile: UserProfile) => {
-    setProfile(updatedProfile);
+    setProfile(mergeProfiles(profile || defaultProfile, updatedProfile));
   };
 
   const handleInputChange = (value: any, section: keyof UserProfile | 'personalInfo' | 'experience' | 'education', index: number | null, field: string) => {
