@@ -27,7 +27,7 @@ export interface Education {
 export interface Resume {
   id: string;
   name: string;
-  data: string; // Base64 encoded resume data
+  data?: string; // Base64 encoded resume data
   text: string; // Extracted plain text
   parsedInfo?: {
     personalInfo?: PersonalInfo;

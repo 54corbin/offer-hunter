@@ -1,5 +1,7 @@
-import { getUserProfile, saveJobsForResume, getJobsForResume } from '../services/storageService';
-import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion } from '../services/llmService';
+import { getUserProfile, saveJobsForResume, getJobsForResume, saveUserProfile } from '../services/storageService';
+import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion, generateResumeForJob } from '../services/llmService';
+
+
 
 let isCancelled = false;
 
@@ -32,6 +34,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     isCancelled = true;
     chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
     sendResponse({ status: "cancelled" });
+  } else if (message.type === "GENERATE_RESUME_FOR_JOB") {
+    handleGenerateResumeForJob(message.job, message.resumeId);
+    sendResponse({ status: "ok" });
+  } else if (message.type === "DOWNLOAD_RESUME") {
+    handleDownloadResume(message.resumeText, message.jobTitle);
+    sendResponse({ status: "ok" });
   }
   return true;
 });
@@ -164,4 +172,57 @@ async function handleScrapedJobs(jobs: any[], resumeId: string) {
   }
   
   chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
+}
+
+async function handleGenerateResumeForJob(job: any, resumeId: string) {
+  const profile = await getUserProfile();
+  if (!profile) {
+    console.error("Could not find user profile.");
+    chrome.runtime.sendMessage({ type: "RESUME_GENERATION_COMPLETE" });
+    return;
+  }
+
+  const resume = profile.resumes?.find(r => r.id === resumeId);
+
+  if (!resume) {
+    console.error("Could not find the specified resume to generate a new one.");
+    chrome.runtime.sendMessage({ type: "RESUME_GENERATION_COMPLETE" });
+    return;
+  }
+
+  const newResumeText = await generateResumeForJob(job, resume.text);
+
+  if (newResumeText) {
+    const newResume = {
+      id: `resume-${Date.now()}`,
+      name: `${resume.name} for ${job.title}`,
+      text: newResumeText,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!profile.resumes) {
+      profile.resumes = [];
+    }
+    profile.resumes.push(newResume);
+    await saveUserProfile(profile);
+
+    chrome.runtime.sendMessage({ 
+      type: "RESUME_GENERATION_SUCCESS",
+      resumeText: newResumeText,
+      job: job
+    });
+  } else {
+    chrome.runtime.sendMessage({ type: "RESUME_GENERATION_COMPLETE" });
+  }
+}
+
+async function handleDownloadResume(resumeText: string, jobTitle: string) {
+  const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(resumeText);
+  const filename = `resume_${jobTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
+  
+  await chrome.downloads.download({
+    url: dataUrl,
+    filename: filename,
+    saveAs: true
+  });
 }

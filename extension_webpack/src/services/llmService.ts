@@ -222,7 +222,7 @@ export const listModels = async (provider: ApiProvider): Promise<string[] | null
   }
 };
 
-export const extractKeywordsFromResume = async (resumeText: string): Promise<string[] | null> => {
+export const extractKeywordsFromResume = async (resumeText: string): Promise<string[]> => {
   const prompt = `
     Based on the following resume text, extract the most relevant keywords for a job search.
     Return a JSON array of 5-10 strings.
@@ -239,13 +239,23 @@ export const extractKeywordsFromResume = async (resumeText: string): Promise<str
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       let jsonString = jsonMatch ? jsonMatch[1] : content;
       jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
-      return JSON.parse(jsonString);
+      const keywords = JSON.parse(jsonString);
+      if (Array.isArray(keywords) && keywords.every(k => typeof k === 'string')) {
+        return keywords;
+      }
+      if (typeof keywords === 'string') {
+        return keywords.split(' ');
+      }
+      return [];
     } catch (e) {
       console.error("Failed to parse keywords from LLM response:", e);
-      return null;
+      if (typeof content === 'string') {
+        return content.split(' ');
+      }
+      return [];
     }
   }
-  return null;
+  return [];
 };
 
 export const generateAnswerForQuestion = async (
@@ -274,6 +284,31 @@ export const generateAnswerForQuestion = async (
     ---
 
     **Answer:**
+  `;
+
+  return await generateContent(prompt);
+};
+
+export const generateResumeForJob = async (
+  jobDetails: any,
+  resumeText: string
+): Promise<string | null> => {
+  const prompt = `
+    You are a professional resume writer. Your task is to rewrite the following resume to be tailored for the given job description.
+    The new resume should highlight the most relevant skills and experience from the original resume that match the job description.
+    The output should be a complete resume in markdown format.
+
+    **Original Resume:**
+    ---
+    ${resumeText.substring(0, 3000)}
+    ---
+
+    **Job Description:**
+    ---
+    ${JSON.stringify(jobDetails, null, 2)}
+    ---
+
+    **New Tailored Resume (Markdown):**
   `;
 
   return await generateContent(prompt);

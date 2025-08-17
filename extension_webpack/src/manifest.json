@@ -7,11 +7,13 @@
     "storage",
     "activeTab",
     "scripting",
-    "contextMenus"
+    "contextMenus",
+    "downloads"
   ],
   "host_permissions": [
     "https://www.seek.com.au/*",
-    "https://www.linkedin.com/*"
+    "https://www.linkedin.com/*",
+    "<all_urls>"
   ],
   "content_scripts": [
     {
@@ -38,5 +40,11 @@
     "16": "icon16.svg",
     "48": "icon48.svg",
     "128": "icon128.svg"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
