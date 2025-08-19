@@ -3,6 +3,7 @@ import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign, FiFileText, FiLoader,
 import { getUserProfile, UserProfile, Resume, getJobsForResume } from '../services/storageService';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ResumeReviewModal from '../components/ResumeReviewModal';
+import CoverLetterReviewModal from '../components/CoverLetterReviewModal';
 
 const JobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -13,7 +14,9 @@ const JobsPage: React.FC = () => {
   const [generatingResumeId, setGeneratingResumeId] = useState<string | null>(null);
   const [generatingCoverLetterId, setGeneratingCoverLetterId] = useState<string | null>(null);
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
+  const [isCoverLetterReviewModalOpen, setCoverLetterReviewModalOpen] = useState(false);
   const [generatedResumeText, setGeneratedResumeText] = useState('');
+  const [generatedCoverLetterText, setGeneratedCoverLetterText] = useState('');
   const [currentJob, setCurrentJob] = useState<any>(null);
 
 
@@ -60,7 +63,8 @@ const JobsPage: React.FC = () => {
         }
       } else if (message.type === "COVER_LETTER_GENERATION_SUCCESS") {
         setGeneratingCoverLetterId(null);
-        navigator.clipboard.writeText(message.coverLetter);
+        setGeneratedCoverLetterText(message.coverLetter);
+        setCoverLetterReviewModalOpen(true);
         // Maybe show a toast notification here
       } else if (message.type === "COVER_LETTER_GENERATION_FAILURE") {
         setGeneratingCoverLetterId(null);
@@ -127,6 +131,11 @@ const JobsPage: React.FC = () => {
     });
   };
 
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(generatedCoverLetterText);
+    setCoverLetterReviewModalOpen(false);
+  };
+
   const handleResumeTabClick = (resumeId: string) => {
     setSelectedResumeId(resumeId);
     fetchJobsForTab(resumeId);
@@ -146,6 +155,12 @@ const JobsPage: React.FC = () => {
         onClose={() => setReviewModalOpen(false)}
         onDownload={handleDownloadResume}
         resumeText={generatedResumeText}
+      />
+      <CoverLetterReviewModal
+        isOpen={isCoverLetterReviewModalOpen}
+        onClose={() => setCoverLetterReviewModalOpen(false)}
+        onCopy={handleCopyToClipboard}
+        coverLetterText={generatedCoverLetterText}
       />
       <div className="flex justify-between items-center">
         <h2 className="text-5xl font-bold text-slate-800">Recommended Jobs</h2>
