@@ -12,7 +12,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <div className="flex items-start justify-between">
           {title && <h3 className="text-lg font-medium leading-6 text-gray-900">{title}</h3>}

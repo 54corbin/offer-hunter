@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   } else if (message.type === "FETCH_JOBS_FROM_SEEK") {
     isCancelled = false;
-    fetchAndScrapeJobs(message.resumeId);
+    fetchAndScrapeJobs(message.resumeId, message.filters);
     sendResponse({ status: "ok" });
   } else if (message.type === "SCRAPED_JOB_DATA") {
     handleScrapedJobs(message.data, message.resumeId);
@@ -103,7 +103,7 @@ async function triggerAutofill(tabId: number, resumeId?: string) {
   }
 }
 
-async function fetchAndScrapeJobs(resumeId: string) {
+async function fetchAndScrapeJobs(resumeId: string, filters: any) {
   const profile = await getUserProfile();
   const resume = profile?.resumes?.find(r => r.id === resumeId);
 
@@ -120,7 +120,19 @@ async function fetchAndScrapeJobs(resumeId: string) {
     return;
   }
 
-  const seekUrl = `https://www.seek.com.au/${encodeURIComponent(keywords.join('-'))}-jobs`;
+  const { classification, location, workType, salary } = filters;
+  const keywordString = encodeURIComponent(keywords.join('-'));
+  let seekUrl = `https://www.seek.com.au/${keywordString}-jobs`;
+
+  const queryParams = new URLSearchParams();
+  if (classification) queryParams.append('classification', classification);
+  if (location) queryParams.append('where', location);
+  if (workType) queryParams.append('work_type', workType);
+  if (salary) queryParams.append('salaryrange', salary);
+
+  if (queryParams.toString()) {
+    seekUrl += `?${queryParams.toString()}`;
+  }
   
   chrome.tabs.create({ url: seekUrl, active: false }, (tab) => {
     if (tab.id) {

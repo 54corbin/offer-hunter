@@ -18,6 +18,10 @@ const JobsPage: React.FC = () => {
   const [generatedResumeText, setGeneratedResumeText] = useState('');
   const [generatedCoverLetterText, setGeneratedCoverLetterText] = useState('');
   const [currentJob, setCurrentJob] = useState<any>(null);
+  const [classification, setClassification] = useState('');
+  const [location, setLocation] = useState('');
+  const [workType, setWorkType] = useState('');
+  const [salary, setSalary] = useState('');
 
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -80,9 +84,15 @@ const JobsPage: React.FC = () => {
     if (selectedResumeId) {
       setIsLoading(true);
       setProgress(0);
-      chrome.runtime.sendMessage({ 
+      chrome.runtime.sendMessage({
         type: "FETCH_JOBS_FROM_SEEK",
-        resumeId: selectedResumeId 
+        resumeId: selectedResumeId,
+        filters: {
+          classification,
+          location,
+          workType,
+          salary,
+        },
       });
     }
   };
@@ -150,7 +160,7 @@ const JobsPage: React.FC = () => {
   return (
     <div className="space-y-8">
       {isLoading && <LoadingOverlay progress={progress} onCancel={handleCancel} />}
-      <ResumeReviewModal 
+      <ResumeReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
         onDownload={handleDownloadResume}
@@ -174,6 +184,36 @@ const JobsPage: React.FC = () => {
         <>
           {profile && profile.resumes && profile.resumes.length > 0 ? (
             <div className="border-b border-gray-200">
+              <div className="flex items-center space-x-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Classification"
+                  value={classification}
+                  onChange={(e) => setClassification(e.target.value)}
+                  className="p-2 border rounded"
+                />
+                <input
+                  type="text"
+                  placeholder="Location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="p-2 border rounded"
+                />
+                <input
+                  type="text"
+                  placeholder="Work Type"
+                  value={workType}
+                  onChange={(e) => setWorkType(e.target.value)}
+                  className="p-2 border rounded"
+                />
+                <input
+                  type="text"
+                  placeholder="Salary"
+                  value={salary}
+                  onChange={(e) => setSalary(e.target.value)}
+                  className="p-2 border rounded"
+                />
+              </div>
               <nav className="-mb-px flex space-x-8 items-center" aria-label="Tabs">
                 {profile.resumes.map(resume => (
                   <button
@@ -194,7 +234,7 @@ const JobsPage: React.FC = () => {
                   disabled={!selectedResumeId}
                 >
                   <FiSearch className="mr-2" />
-                  Find New Jobs
+                  Refresh Jobs
                 </button>
               </nav>
             </div>
@@ -260,7 +300,7 @@ const JobsPage: React.FC = () => {
             !isProfileLoading && (
               <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
                 <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs for this resume.</h3>
-                <p className="mt-2 text-slate-500">Click "Find New Jobs" to start a search.</p>
+                <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>
               </div>
             )
           )}

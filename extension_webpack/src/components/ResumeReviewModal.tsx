@@ -14,7 +14,7 @@ const ResumeReviewModal: React.FC<ResumeReviewModalProps> = ({ isOpen, onClose, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl h-full max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-2xl font-bold text-slate-800">Review Generated Resume</h3>
