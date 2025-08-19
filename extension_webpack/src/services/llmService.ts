@@ -313,3 +313,29 @@ export const generateResumeForJob = async (
 
   return await generateContent(prompt);
 };
+
+export const generateCoverLetterForJob = async (
+  jobDetails: any,
+  resumeText: string
+): Promise<string | null> => {
+  const prompt = `
+    You are a professional career coach. Your task is to write a compelling and professional cover letter for a job application.
+    The cover letter should be based on the candidate's resume and the provided job description.
+    It should be concise (3-4 paragraphs), highlight the candidate's most relevant skills and experience, and express enthusiasm for the role.
+    The output should be a complete cover letter in markdown format.
+
+    **Candidate's Resume:**
+    ---
+    ${resumeText.substring(0, 3000)}
+    ---
+
+    **Job Description:**
+    ---
+    ${JSON.stringify(jobDetails, null, 2)}
+    ---
+
+    **Cover Letter (Markdown):**
+  `;
+
+  return await generateContent(prompt);
+};

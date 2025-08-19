@@ -1,7 +1,5 @@
 import { getUserProfile, saveJobsForResume, getJobsForResume, saveUserProfile } from '../services/storageService';
-import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion, generateResumeForJob } from '../services/llmService';
-
-
+import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion, generateResumeForJob, generateCoverLetterForJob } from '../services/llmService';
 
 let isCancelled = false;
 
@@ -39,6 +37,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "ok" });
   } else if (message.type === "DOWNLOAD_RESUME") {
     handleDownloadResume(message.resumeText, message.jobTitle);
+    sendResponse({ status: "ok" });
+  } else if (message.type === "GENERATE_COVER_LETTER_FOR_JOB") {
+    handleGenerateCoverLetterForJob(message.job, message.resumeId);
     sendResponse({ status: "ok" });
   }
   return true;
@@ -225,4 +226,33 @@ async function handleDownloadResume(resumeText: string, jobTitle: string) {
     filename: filename,
     saveAs: true
   });
+}
+
+async function handleGenerateCoverLetterForJob(job: any, resumeId: string) {
+  const profile = await getUserProfile();
+  if (!profile) {
+    console.error("Could not find user profile.");
+    chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });
+    return;
+  }
+
+  const resume = profile.resumes?.find(r => r.id === resumeId);
+
+  if (!resume) {
+    console.error("Could not find the specified resume to generate a cover letter.");
+    chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });
+    return;
+  }
+
+  const coverLetter = await generateCoverLetterForJob(job, resume.text);
+
+  if (coverLetter) {
+    chrome.runtime.sendMessage({ 
+      type: "COVER_LETTER_GENERATION_SUCCESS",
+      coverLetter: coverLetter,
+      job: job
+    });
+  } else {
+    chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });
+  }
 }
