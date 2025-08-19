@@ -98,13 +98,48 @@ const findLabelForTextarea = (textarea: HTMLTextAreaElement): string | null => {
 };
 
 
+
+const fillSelectFields = (profile: UserProfile) => {
+  console.log("Autofilling select fields with profile:", profile);
+  const selects = document.querySelectorAll('select');
+  let fieldsFilled = 0;
+
+  selects.forEach(select => {
+    const el = select as HTMLSelectElement;
+    const id = el.id?.toLowerCase() || '';
+    const name = el.name?.toLowerCase() || '';
+    const ariaLabel = el.ariaLabel?.toLowerCase() || '';
+    const searchTerms = [id, name, ariaLabel].filter(Boolean);
+
+    for (const key in fieldMappings) {
+      const terms = fieldMappings[key];
+      if (searchTerms.some(searchTerm => terms.some(term => searchTerm.includes(term)))) {
+        const value = getProfileValue(profile, key);
+        if (value) {
+          for (let i = 0; i < el.options.length; i++) {
+            const option = el.options[i];
+            if (option.value.toLowerCase() === value.toLowerCase() || option.text.toLowerCase() === value.toLowerCase()) {
+              el.value = option.value;
+              fieldsFilled++;
+              break;
+            }
+          }
+        }
+        break;
+      }
+    }
+  });
+  return fieldsFilled;
+};
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'AUTOFILL_DATA') {
     const { profile, resume } = message;
     if (profile && resume) {
       const simpleFieldsFilled = fillSimpleFields(profile);
+      const selectFieldsFilled = fillSelectFields(profile);
       handleOpenQuestions();
-      sendResponse({ status: `success, ${simpleFieldsFilled} fields filled.` });
+      sendResponse({ status: `success, ${simpleFieldsFilled + selectFieldsFilled} fields filled.` });
     } else {
       sendResponse({ status: "error", message: "Profile or resume data missing." });
     }

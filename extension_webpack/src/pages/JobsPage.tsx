@@ -23,6 +23,9 @@ const JobsPage: React.FC = () => {
   const [workType, setWorkType] = useState('');
   const [salary, setSalary] = useState('');
 
+  const classifications = ["Accounting", "Administration & Office Support", "Advertising, Arts & Media", "Banking & Financial Services", "Call Centre & Customer Service", "Education & Training", "Government & Defence", "Healthcare & Medical", "Sales"];
+  const workTypes = ["Full-time", "Part-time", "Casual", "Contract/Temp"];
+
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
@@ -185,13 +188,14 @@ const JobsPage: React.FC = () => {
           {profile && profile.resumes && profile.resumes.length > 0 ? (
             <div className="border-b border-gray-200">
               <div className="flex items-center space-x-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="Classification"
+                <select
                   value={classification}
                   onChange={(e) => setClassification(e.target.value)}
                   className="p-2 border rounded"
-                />
+                >
+                  <option value="">All Classifications</option>
+                  {classifications.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
                 <input
                   type="text"
                   placeholder="Location"
@@ -199,13 +203,14 @@ const JobsPage: React.FC = () => {
                   onChange={(e) => setLocation(e.target.value)}
                   className="p-2 border rounded"
                 />
-                <input
-                  type="text"
-                  placeholder="Work Type"
+                <select
                   value={workType}
                   onChange={(e) => setWorkType(e.target.value)}
                   className="p-2 border rounded"
-                />
+                >
+                  <option value="">All Work Types</option>
+                  {workTypes.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+                </select>
                 <input
                   type="text"
                   placeholder="Salary"
