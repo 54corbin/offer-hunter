@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getUserProfile, saveUserProfile, UserProfile, ApiProvider } from '../services/storageService';
 import { listModels } from '../services/llmService';
 import { FiSave, FiKey, FiToggleLeft, FiToggleRight, FiLock, FiPlus, FiTrash2, FiCpu, FiDownloadCloud } from 'react-icons/fi';
@@ -14,6 +14,9 @@ const SettingsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: () => {} });
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
     getUserProfile().then(p => {
       if (p) {
@@ -22,6 +25,21 @@ const SettingsPage: React.FC = () => {
           p.settings.activeAiProviderId = p.settings.apiProviders[0].id;
         }
         setProfile(p);
+      } else {
+        const newProfile: UserProfile = {
+          personalInfo: { name: '', email: '', phone: '' },
+          experience: [],
+          education: [],
+          skills: [],
+          resumes: [],
+          settings: {
+            autoFillEnabled: true,
+            aiRecommendationsEnabled: true,
+            passcodeEnabled: false,
+            apiProviders: [],
+          },
+        };
+        setProfile(newProfile);
       }
     });
   }, []);
@@ -33,6 +51,11 @@ const SettingsPage: React.FC = () => {
 
   const handleSave = () => {
     if (profile) {
+      if (!profile.settings.activeAiProviderId || profile.settings.apiProviders?.length === 0) {
+        showModal("AI Provider Required", "Please add and set an active AI provider before saving.");
+        return;
+      }
+
       let profileToSave = { ...profile };
       if (profile.settings.passcodeEnabled) {
         if (passcode || confirmPasscode) {
@@ -71,7 +94,11 @@ const SettingsPage: React.FC = () => {
     if (profile) {
       const newProvider: ApiProvider = { id: new Date().toISOString(), name: 'OpenAI', model: 'gpt-4o-mini', apiKey: '' };
       const newProviders = [...(profile.settings.apiProviders || []), newProvider];
-      setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+      const newSettings = { ...profile.settings, apiProviders: newProviders };
+      if (newProviders.length === 1) {
+        newSettings.activeAiProviderId = newProvider.id;
+      }
+      setProfile({ ...profile, settings: newSettings });
     }
   };
 
@@ -85,7 +112,11 @@ const SettingsPage: React.FC = () => {
           if (profile && profile.settings.apiProviders) {
             const newProviders = [...profile.settings.apiProviders];
             newProviders.splice(index, 1);
-            setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+            const newSettings = { ...profile.settings, apiProviders: newProviders };
+            if (profile.settings.activeAiProviderId === provider.id) {
+              newSettings.activeAiProviderId = newProviders.length > 0 ? newProviders[0].id : undefined;
+            }
+            setProfile({ ...profile, settings: newSettings });
           }
         }
       );
@@ -186,7 +217,7 @@ const SettingsPage: React.FC = () => {
         {profile.settings.passcodeEnabled && (
           <div className="space-y-4 pt-4 border-t border-slate-200">
             <div>
-              <label htmlFor="passcode" className="block text-sm font-medium text-slate-700">New Passcode (4 digits):</label>
+              <label htmlFor="passcode" className="block text-sm font-medium text-slate-700">New Passcode (.4 digits):</label>
               <input
                 type="password"
                 id="passcode"

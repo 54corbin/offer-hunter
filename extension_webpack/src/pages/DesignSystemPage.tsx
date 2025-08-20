@@ -12,9 +12,13 @@ const mockNavigation = [
 ];
 
 const DesignSystemPage: React.FC = () => {
+  const handleRedirectToSettings = () => {
+    console.log('Redirecting to settings...');
+  };
+
   return (
     <div className="p-8 space-y-8">
-      <Header title="Design System" navigation={mockNavigation} />
+      <Header title="Design System" navigation={mockNavigation} onRedirectToSettings={handleRedirectToSettings} />
 
       <Card className="p-6">
         <h2 className="text-xl font-bold mb-4">Buttons</h2>

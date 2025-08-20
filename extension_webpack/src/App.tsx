@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import HistoryPage from './pages/HistoryPage';
 import JobsPage from './pages/JobsPage';
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [passcodeError, setPasscodeError] = useState(false);
   const [storedPasscodeHash, setStoredPasscodeHash] = useState<string | null>(null);
+  const [redirectToSettings, setRedirectToSettings] = useState(false);
 
   useEffect(() => {
     getUserProfile().then(profile => {
@@ -31,7 +32,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleUnlock = (enteredPasscode: string) => {
-    if (enteredPasscode.length < 4) return; 
+    if (enteredPasscode.length < 4) return;
     const hashedEnteredPasscode = CryptoJS.SHA256(enteredPasscode).toString();
     if (hashedEnteredPasscode === storedPasscodeHash) {
       setIsLocked(false);
@@ -54,22 +55,29 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRedirectToSettings = () => {
+    setRedirectToSettings(true);
+  };
+
+  if (redirectToSettings) {
+    setRedirectToSettings(false); // Reset the state after redirection
+    return <Navigate to="/settings" />;
+  }
+
   return (
     <>
       {isLocked && <PasscodeComponent onUnlock={handleUnlock} isError={passcodeError} />}
       <div className={isLocked ? 'blur-sm' : '' }>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Navigate to="/profile" replace />} />
-              <Route path="/history" element={<HistoryPage />} />
-              <Route path="/jobs" element={<JobsPage />} />
-              <Route path="/privacy" element={<PrivacyPolicyPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-          </Layout>
-        </Router>
+        <Layout onRedirectToSettings={handleRedirectToSettings}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/profile" replace />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </Layout>
       </div>
     </>
   );
