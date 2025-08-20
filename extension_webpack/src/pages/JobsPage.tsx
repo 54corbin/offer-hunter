@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign, FiFileText, FiLoader, FiMail } from 'react-icons/fi';
-import { getUserProfile, UserProfile, Resume, getJobsForResume } from '../services/storageService';
+import { getUserProfile, UserProfile, Resume, getJobsForResume, saveUserProfile } from '../services/storageService';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ResumeReviewModal from '../components/ResumeReviewModal';
 import CoverLetterReviewModal from '../components/CoverLetterReviewModal';
@@ -149,9 +149,21 @@ const JobsPage: React.FC = () => {
     setCoverLetterReviewModalOpen(false);
   };
 
-  const handleResumeTabClick = (resumeId: string) => {
+  const handleResumeTabClick = async (resumeId: string) => {
     setSelectedResumeId(resumeId);
     fetchJobsForTab(resumeId);
+
+    if (profile) {
+      const updatedProfile = {
+        ...profile,
+        settings: {
+          ...profile.settings,
+          activeResumeId: resumeId,
+        },
+      };
+      setProfile(updatedProfile);
+      await saveUserProfile(updatedProfile);
+    }
   };
 
   const getScoreColor = (score: number) => {
