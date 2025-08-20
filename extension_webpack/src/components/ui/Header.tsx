@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { IconType } from 'react-icons';
 import { getUserProfile } from '../../services/storageService';
 
@@ -16,26 +16,16 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ title, navigation, onRedirectToSettings }) => {
-  const [aiProviderConfigured, setAiProviderConfigured] = useState(true);
-  const location = useLocation();
-
-  useEffect(() => {
-    const checkAiProvider = async () => {
+  const handleNavClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href !== '/settings') {
       const userProfile = await getUserProfile();
-      const isConfigured =
-        !!userProfile?.settings?.activeAiProviderId &&
-        (userProfile?.settings?.apiProviders?.length ?? 0) > 0;
-      setAiProviderConfigured(isConfigured);
-    };
+      const isConfigured = !!userProfile?.settings?.activeAiProviderId && (user_profile?.settings?.apiProviders?.length ?? 0) > 0;
 
-    checkAiProvider();
-  }, [location.pathname]);
-
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (!aiProviderConfigured && href !== '/settings') {
-      e.preventDefault();
-      alert('Please configure an AI provider in Settings before proceeding.');
-      onRedirectToSettings();
+      if (!isConfigured) {
+        e.preventDefault();
+        alert('Please configure an AI provider in Settings before proceeding.');
+        onRedirectToSettings();
+      }
     }
   };
 
