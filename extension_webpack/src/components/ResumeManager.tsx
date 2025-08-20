@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SimpleLoadingOverlay from './SimpleLoadingOverlay';
 import { UserProfile, Resume, saveUserProfile } from '../services/storageService';
 import { extractProfileFromResume } from '../services/llmService';
 import { FiUpload, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
@@ -21,10 +22,13 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
   const [newName, setNewName] = useState('');
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setLoading(true);
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -92,9 +96,14 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
     
     const updatedResumes = [...(updatedProfile.resumes || []), newResume];
     updatedProfile.resumes = updatedResumes;
+
+    if (!updatedProfile.settings.activeResumeId) {
+      updatedProfile.settings.activeResumeId = newResume.id;
+    }
     
     onProfileUpdate(updatedProfile);
     await saveUserProfile(updatedProfile);
+    setLoading(false);
   };
 
   const handleRename = (resume: Resume) => {
@@ -152,6 +161,15 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
     if (resumeToDelete) {
       const updatedResumes = profile.resumes?.filter(r => r.id !== resumeToDelete);
       const updatedProfile = { ...profile, resumes: updatedResumes };
+
+      if (profile.settings.activeResumeId === resumeToDelete) {
+        if (updatedResumes && updatedResumes.length === 1) {
+          updatedProfile.settings.activeResumeId = updatedResumes[0].id;
+        } else {
+          updatedProfile.settings.activeResumeId = undefined;
+        }
+      }
+
       onProfileUpdate(updatedProfile);
       await saveUserProfile(updatedProfile);
       setResumeToDelete(null);
@@ -161,6 +179,7 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
 
   return (
     <>
+      {loading && <SimpleLoadingOverlay message="Processing your resume..." />}
       <ConfirmModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}

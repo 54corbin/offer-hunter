@@ -15,10 +15,19 @@ const App: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [passcodeError, setPasscodeError] = useState(false);
   const [storedPasscodeHash, setStoredPasscodeHash] = useState<string | null>(null);
-  const [redirectToSettings, setRedirectToSettings] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const updateConfigStatus = async () => {
+    const profile = await getUserProfile();
+    const configured = !!profile?.settings?.activeAiProviderId && (profile?.settings?.apiProviders?.length ?? 0) > 0;
+    setIsConfigured(configured);
+  };
 
   useEffect(() => {
-    getUserProfile().then(profile => {
+    const initialize = async () => {
+      await updateConfigStatus();
+      const profile = await getUserProfile();
       if (profile?.settings?.passcodeEnabled && profile?.settings?.passcodeHash) {
         const { lastActiveTime, lockoutDelay } = profile.settings;
         if ((lockoutDelay ?? 0) === 0 || !lastActiveTime || (Date.now() - lastActiveTime > (lockoutDelay ?? 0))) {
@@ -28,7 +37,9 @@ const App: React.FC = () => {
       } else {
         setIsLocked(false);
       }
-    });
+      setLoading(false);
+    };
+    initialize();
   }, []);
 
   const handleUnlock = (enteredPasscode: string) => {
@@ -55,29 +66,37 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRedirectToSettings = () => {
-    setRedirectToSettings(true);
-  };
-
-  if (redirectToSettings) {
-    setRedirectToSettings(false); // Reset the state after redirection
-    return <Navigate to="/settings" />;
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
     <>
       {isLocked && <PasscodeComponent onUnlock={handleUnlock} isError={passcodeError} />}
       <div className={isLocked ? 'blur-sm' : '' }>
-        <Layout onRedirectToSettings={handleRedirectToSettings}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/profile" replace />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/jobs" element={<JobsPage />} />
-            <Route path="/privacy" element={<PrivacyPolicyPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          {!isConfigured ? (
+            <Route path="/*" element={<Navigate to="/settings" replace />} />
+          ) : (
+            <Route path="/*" element={
+              <Layout onRedirectToSettings={() => {}} isConfigured={isConfigured}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/profile" replace />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/settings" element={<SettingsPage onSettingsSave={updateConfigStatus} />} />
+                </Routes>
+              </Layout>
+            } />
+          )}
+          <Route path="/settings" element={
+            <Layout onRedirectToSettings={() => {}} isConfigured={isConfigured}>
+              <SettingsPage onSettingsSave={updateConfigStatus} />
+            </Layout>
+          } />
+        </Routes>
       </div>
     </>
   );

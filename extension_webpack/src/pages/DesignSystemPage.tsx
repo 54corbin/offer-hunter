@@ -18,7 +18,7 @@ const DesignSystemPage: React.FC = () => {
 
   return (
     <div className="p-8 space-y-8">
-      <Header title="Design System" navigation={mockNavigation} onRedirectToSettings={handleRedirectToSettings} />
+      <Header title="Design System" navigation={mockNavigation} onRedirectToSettings={handleRedirectToSettings} isConfigured={true} />
 
       <Card className="p-6">
         <h2 className="text-xl font-bold mb-4">Buttons</h2>

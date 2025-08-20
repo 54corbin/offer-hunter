@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { IconType } from 'react-icons';
-import { getUserProfile } from '../../services/storageService';
 
 export interface NavigationItem {
   name: string;
@@ -13,19 +12,15 @@ interface HeaderProps {
   title: string;
   navigation: NavigationItem[];
   onRedirectToSettings: () => void;
+  isConfigured: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, navigation, onRedirectToSettings }) => {
-  const handleNavClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href !== '/settings') {
-      const userProfile = await getUserProfile();
-      const isConfigured = !!userProfile?.settings?.activeAiProviderId && (user_profile?.settings?.apiProviders?.length ?? 0) > 0;
-
-      if (!isConfigured) {
-        e.preventDefault();
-        alert('Please configure an AI provider in Settings before proceeding.');
-        onRedirectToSettings();
-      }
+const Header: React.FC<HeaderProps> = ({ title, navigation, onRedirectToSettings, isConfigured }) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href !== '/settings' && !isConfigured) {
+      e.preventDefault();
+      alert('Please configure an AI provider in Settings before proceeding.');
+      onRedirectToSettings();
     }
   };
 

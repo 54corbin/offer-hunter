@@ -5,7 +5,11 @@ import { listModels } from '../services/llmService';
 import { FiSave, FiKey, FiToggleLeft, FiToggleRight, FiLock, FiPlus, FiTrash2, FiCpu, FiDownloadCloud } from 'react-icons/fi';
 import { ConfirmModal } from '../components/ConfirmModal';
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+  onSettingsSave: () => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [passcode, setPasscode] = useState("");
   const [confirmPasscode, setConfirmPasscode] = useState("");
@@ -78,6 +82,7 @@ const SettingsPage: React.FC = () => {
         setPasscode("");
         setConfirmPasscode("");
         setPasscodeError("");
+        onSettingsSave();
       });
     }
   };
