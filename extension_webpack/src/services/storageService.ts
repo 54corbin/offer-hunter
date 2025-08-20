@@ -52,8 +52,6 @@ export interface UserProfile {
   skills: string[];
   resumes?: Resume[];
   settings: {
-    autoFillEnabled: boolean;
-    aiRecommendationsEnabled: boolean;
     passcodeEnabled: boolean;
     passcodeHash?: string;
     lockoutDelay?: number;

@@ -209,10 +209,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
         ))}
         
         <button onClick={addProvider} className="flex items-center text-blue-500"><FiPlus className="mr-2" />Add Provider</button>
-        <hr className="border-slate-200" />
-        <Toggle enabled={profile.settings.autoFillEnabled} onChange={(val) => handleToggleChange('autoFillEnabled', val)} label="Enable Auto-fill" Icon={FiToggleRight} />
-        <hr className="border-slate-200" />
-        <Toggle enabled={profile.settings.aiRecommendationsEnabled} onChange={(val) => handleToggleChange('aiRecommendationsEnabled', val)} label="Enable AI Recommendations" Icon={FiToggleRight} />
+        
       </div>
 
       <div className="p-8 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg space-y-6">
