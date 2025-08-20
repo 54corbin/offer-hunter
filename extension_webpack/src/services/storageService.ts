@@ -6,6 +6,7 @@ export interface PersonalInfo {
   name: string;
   email: string;
   phone: string;
+  gender?: string;
 }
 
 export interface WorkExperience {

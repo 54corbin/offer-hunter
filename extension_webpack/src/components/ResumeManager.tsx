@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile, Resume, saveUserProfile } from '../services/storageService';
 import { extractProfileFromResume } from '../services/llmService';
 import { FiUpload, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
+import { ConfirmModal } from './ConfirmModal';
 
 declare global {
   interface Window {
@@ -18,6 +19,8 @@ interface ResumeManagerProps {
 const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate }) => {
   const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [resumeToDelete, setResumeToDelete] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,67 +143,83 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
     }
   };
 
-  const handleDelete = async (resumeId: string) => {
-    if (window.confirm('Are you sure you want to delete this resume?')) {
-      const updatedResumes = profile.resumes?.filter(r => r.id !== resumeId);
+  const handleDelete = (resumeId: string) => {
+    setResumeToDelete(resumeId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (resumeToDelete) {
+      const updatedResumes = profile.resumes?.filter(r => r.id !== resumeToDelete);
       const updatedProfile = { ...profile, resumes: updatedResumes };
       onProfileUpdate(updatedProfile);
       await saveUserProfile(updatedProfile);
+      setResumeToDelete(null);
+      setIsConfirmModalOpen(false);
     }
   };
 
   return (
-    <section className="p-6 bg-white rounded-2xl shadow-lg">
-      <h3 className="text-2xl font-semibold mb-4 text-slate-700">Manage Resumes</h3>
-      <div className="flex items-center space-x-4 mb-4">
-        <label className="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer">
-          <FiUpload className="mr-2" />
-          <span>Upload New Resume</span>
-          <input type="file" accept=".pdf,.docx" onChange={handleFileChange} className="hidden" />
-        </label>
-      </div>
-      <div className="space-y-2">
-        {profile.resumes?.map(resume => (
-          <div key={resume.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-            {editingResumeId === resume.id ? (
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="p-1 border border-slate-300 rounded-lg"
-              />
-            ) : (
-              <>
-                <span className="text-slate-700">{resume.name}</span>
-                {profile.settings.activeResumeId === resume.id && (
-                  <span className="ml-2 px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Default</span>
-                )}
-              </>
-            )}
-            <div className="flex items-center space-x-4">
-              <input
-                type="radio"
-                name="selectedResume"
-                checked={profile.settings.activeResumeId === resume.id}
-                onChange={() => handleSelectResume(resume.id)}
-                className="form-radio h-5 w-5 text-blue-600"
-              />
+    <>
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Resume"
+        message="Are you sure you want to delete this resume? This action cannot be undone."
+      />
+      <section className="p-6 bg-white rounded-2xl shadow-lg">
+        <h3 className="text-2xl font-semibold mb-4 text-slate-700">Manage Resumes</h3>
+        <div className="flex items-center space-x-4 mb-4">
+          <label className="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer">
+            <FiUpload className="mr-2" />
+            <span>Upload New Resume</span>
+            <input type="file" accept=".pdf,.docx" onChange={handleFileChange} className="hidden" />
+          </label>
+        </div>
+        <div className="space-y-2">
+          {profile.resumes?.map(resume => (
+            <div key={resume.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
               {editingResumeId === resume.id ? (
-                <>
-                  <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-700"><FiSave size={20} /></button>
-                  <button onClick={() => setEditingResumeId(null)} className="p-2 text-red-500 hover:text-red-700"><FiXCircle size={20} /></button>
-                </>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="p-1 border border-slate-300 rounded-lg"
+                />
               ) : (
                 <>
-                  <button onClick={() => handleRename(resume)} className="p-2 text-blue-500 hover:text-blue-700"><FiEdit size={20} /></button>
+                  <span className="text-slate-700">{resume.name}</span>
+                  {profile.settings.activeResumeId === resume.id && (
+                    <span className="ml-2 px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Default</span>
+                  )}
                 </>
               )}
-              <button onClick={() => handleDelete(resume.id)} className="p-2 text-red-500 hover:text-red-700"><FiTrash2 size={20} /></button>
+              <div className="flex items-center space-x-4">
+                <input
+                  type="radio"
+                  name="selectedResume"
+                  checked={profile.settings.activeResumeId === resume.id}
+                  onChange={() => handleSelectResume(resume.id)}
+                  className="form-radio h-5 w-5 text-blue-600"
+                />
+                {editingResumeId === resume.id ? (
+                  <>
+                    <button onClick={() => handleSaveRename(resume.id)} className="p-2 text-green-500 hover:text-green-700"><FiSave size={20} /></button>
+                    <button onClick={() => setEditingResumeId(null)} className="p-2 text-red-500 hover:text-red-700"><FiXCircle size={20} /></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleRename(resume)} className="p-2 text-blue-500 hover:text-blue-700"><FiEdit size={20} /></button>
+                  </>
+                )}
+                <button onClick={() => handleDelete(resume.id)} className="p-2 text-red-500 hover:text-red-700"><FiTrash2 size={20} /></button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </section>
+          ))}
+        </div>
+      </section>
+    </>
   );
 };
 

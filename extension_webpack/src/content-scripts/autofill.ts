@@ -6,6 +6,7 @@ const fieldMappings: { [key: string]: string[] } = {
   'personalInfo.name': ['name', 'full-name', 'fullName'],
   'personalInfo.email': ['email', 'email-address', 'emailAddress'],
   'personalInfo.phone': ['phone', 'phone-number', 'phoneNumber'],
+  'personalInfo.gender': ['gender'],
 };
 
 const fillSimpleFields = (profile: UserProfile) => {
@@ -99,36 +100,86 @@ const findLabelForTextarea = (textarea: HTMLTextAreaElement): string | null => {
 
 
 
+const flattenProfile = (profile: UserProfile): { [key: string]: string } => {
+  const flattened: { [key: string]: string } = {};
+
+  // Flatten personalInfo
+  for (const [key, value] of Object.entries(profile.personalInfo)) {
+    if (typeof value === 'string') {
+      flattened[key] = value;
+    }
+  }
+
+  // Flatten most recent experience and education
+  if (profile.experience.length > 0) {
+    const latestExperience = profile.experience[0];
+    for (const [key, value] of Object.entries(latestExperience)) {
+      if (typeof value === 'string') {
+        flattened[key] = value;
+      }
+    }
+  }
+
+  if (profile.education.length > 0) {
+    const latestEducation = profile.education[0];
+    for (const [key, value] of Object.entries(latestEducation)) {
+      if (typeof value === 'string') {
+        flattened[key] = value;
+      }
+    }
+  }
+
+  // Add skills
+  if (profile.skills.length > 0) {
+    flattened['skills'] = profile.skills.join(', ');
+  }
+
+  return flattened;
+};
+
 const fillSelectFields = (profile: UserProfile) => {
   console.log("Autofilling select fields with profile:", profile);
   const selects = document.querySelectorAll('select');
   let fieldsFilled = 0;
+  const flatProfile = flattenProfile(profile);
+  const profileKeys = Object.keys(flatProfile);
 
   selects.forEach(select => {
     const el = select as HTMLSelectElement;
     const id = el.id?.toLowerCase() || '';
     const name = el.name?.toLowerCase() || '';
     const ariaLabel = el.ariaLabel?.toLowerCase() || '';
-    const searchTerms = [id, name, ariaLabel].filter(Boolean);
+    const searchTerms = [id, name, ariaLabel].filter(Boolean).join(' ');
 
-    for (const key in fieldMappings) {
-      const terms = fieldMappings[key];
-      if (searchTerms.some(searchTerm => terms.some(term => searchTerm.includes(term)))) {
-        const value = getProfileValue(profile, key);
-        if (value) {
-          for (let i = 0; i < el.options.length; i++) {
-            const option = el.options[i];
-            if (option.value.toLowerCase() === value.toLowerCase() || option.text.toLowerCase() === value.toLowerCase()) {
-              el.value = option.value;
-              fieldsFilled++;
-              break;
-            }
+    // Find the best matching profile key
+    const matchedKey = profileKeys.find(key => searchTerms.includes(key.toLowerCase()));
+
+    if (matchedKey) {
+      const value = flatProfile[matchedKey];
+      if (value) {
+        for (let i = 0; i < el.options.length; i++) {
+          const option = el.options[i];
+          const optionText = option.text.toLowerCase();
+          const optionValue = option.value.toLowerCase();
+          const profileValue = value.toLowerCase();
+
+          if (optionValue === profileValue || optionText === profileValue) {
+            el.value = option.value;
+            fieldsFilled++;
+            break; 
+          }
+          
+          // Partial match for states, etc.
+          if (optionText.includes(profileValue) || profileValue.includes(optionText)) {
+             el.value = option.value;
+             fieldsFilled++;
+             break;
           }
         }
-        break;
       }
     }
   });
+
   return fieldsFilled;
 };
 

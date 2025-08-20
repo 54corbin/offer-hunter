@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getUserProfile, saveUserProfile, UserProfile, ApiProvider } from '../services/storageService';
 import { listModels } from '../services/llmService';
 import { FiSave, FiKey, FiToggleLeft, FiToggleRight, FiLock, FiPlus, FiTrash2, FiCpu, FiDownloadCloud } from 'react-icons/fi';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const SettingsPage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -10,6 +11,8 @@ const SettingsPage: React.FC = () => {
   const [confirmPasscode, setConfirmPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState("");
   const [modelLists, setModelLists] = useState<{[key: string]: string[]}>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: () => {} });
 
   useEffect(() => {
     getUserProfile().then(p => {
@@ -22,6 +25,11 @@ const SettingsPage: React.FC = () => {
       }
     });
   }, []);
+
+  const showModal = (title: string, message: string, onConfirm?: () => void) => {
+    setModalContent({ title, message, onConfirm: onConfirm || (() => setIsModalOpen(false)) });
+    setIsModalOpen(true);
+  };
 
   const handleSave = () => {
     if (profile) {
@@ -43,7 +51,7 @@ const SettingsPage: React.FC = () => {
       }
 
       saveUserProfile(profileToSave).then(() => {
-        alert("Settings saved!");
+        showModal("Success", "Settings saved!");
         setPasscode("");
         setConfirmPasscode("");
         setPasscodeError("");
@@ -68,10 +76,19 @@ const SettingsPage: React.FC = () => {
   };
 
   const removeProvider = (index: number) => {
-    if (profile) {
-      const newProviders = [...(profile.settings.apiProviders || [])];
-      newProviders.splice(index, 1);
-      setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+    if (profile && profile.settings.apiProviders) {
+      const provider = profile.settings.apiProviders[index];
+      showModal(
+        'Confirm Removal',
+        `Are you sure you want to remove the provider "${provider.name}"?`,
+        () => {
+          if (profile && profile.settings.apiProviders) {
+            const newProviders = [...profile.settings.apiProviders];
+            newProviders.splice(index, 1);
+            setProfile({ ...profile, settings: { ...profile.settings, apiProviders: newProviders } });
+          }
+        }
+      );
     }
   };
   
@@ -95,7 +112,7 @@ const SettingsPage: React.FC = () => {
 
   const handleFetchModels = async (provider: ApiProvider) => {
     if (!provider.apiKey) {
-      alert("Please enter an API key first.");
+      showModal("API Key Required", "Please enter an API key first.");
       return;
     }
     const models = await listModels(provider);
@@ -219,6 +236,13 @@ const SettingsPage: React.FC = () => {
         </button>
         <Link to="/privacy" className="text-sm text-blue-500 hover:underline">Privacy Policy</Link>
       </div>
+      <ConfirmModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={modalContent.onConfirm}
+        title={modalContent.title}
+        message={modalContent.message}
+      />
     </div>
   );
 };
