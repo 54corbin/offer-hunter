@@ -29,7 +29,6 @@
     "service_worker": "background.bundle.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icon16.svg",
       "48": "icon48.svg",

@@ -1,7 +1,39 @@
 import { getUserProfile, saveJobsForResume, getJobsForResume, saveUserProfile } from '../services/storageService';
 import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion, generateResumeForJob, generateCoverLetterForJob } from '../services/llmService';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 let isCancelled = false;
+
+async function createPdf(text: string): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage();
+  const { width, height } = page.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  const margin = 50;
+  const textWidth = width - 2 * margin;
+
+  const lines = text.split('\n');
+  let y = height - margin;
+
+  for (const line of lines) {
+    if (y < margin) {
+      page = pdfDoc.addPage();
+      y = height - margin;
+    }
+    page.drawText(line, {
+      x: margin,
+      y,
+      font,
+      size: fontSize,
+      color: rgb(0, 0, 0),
+      maxWidth: textWidth,
+    });
+    y -= fontSize * 1.2;
+  }
+
+  return pdfDoc.save();
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Offer Hunter extension installed.");
@@ -9,6 +41,12 @@ chrome.runtime.onInstalled.addListener(() => {
     id: "offer-hunter-autofill",
     title: "Autofill Form",
     contexts: ["page"],
+  });
+});
+
+chrome.action.onClicked.addListener((tab) => {
+  chrome.tabs.create({
+    url: 'index.html#/'
   });
 });
 
@@ -229,10 +267,20 @@ async function handleGenerateResumeForJob(job: any, resumeId: string) {
   }
 }
 
+function Uint8ArrayToBase64(array: Uint8Array) {
+  let binary = '';
+  for (let i = 0; i < array.byteLength; i++) {
+    binary += String.fromCharCode(array[i]);
+  }
+  return btoa(binary);
+}
+
 async function handleDownloadResume(resumeText: string, jobTitle: string) {
-  const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(resumeText);
-  const filename = `resume_${jobTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
-  
+  const pdfBytes = await createPdf(resumeText);
+  const base64Data = Uint8ArrayToBase64(pdfBytes);
+  const dataUrl = `data:application/pdf;base64,${base64Data}`;
+  const filename = `resume_${jobTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
   await chrome.downloads.download({
     url: dataUrl,
     filename: filename,
