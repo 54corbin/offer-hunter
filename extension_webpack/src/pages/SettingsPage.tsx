@@ -14,7 +14,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
   const [passcode, setPasscode] = useState("");
   const [confirmPasscode, setConfirmPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState("");
-  const [modelLists, setModelLists] = useState<{[key: string]: string[]}>({});
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: () => {} });
 
@@ -37,8 +37,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
           skills: [],
           resumes: [],
           settings: {
-            autoFillEnabled: true,
-            aiRecommendationsEnabled: true,
             passcodeEnabled: false,
             apiProviders: [],
           },
@@ -146,16 +144,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
     }
   };
 
-  const handleFetchModels = async (provider: ApiProvider) => {
-    if (!provider.apiKey) {
-      showModal("API Key Required", "Please enter an API key first.");
-      return;
-    }
-    const models = await listModels(provider);
-    if (models) {
-      setModelLists(prev => ({ ...prev, [provider.id]: models }));
-    }
-  };
+  
 
   const Toggle = ({ enabled, onChange, label, Icon }: { enabled: boolean, onChange: (enabled: boolean) => void, label: string, Icon: React.ElementType }) => (
     <div className="flex items-center justify-between">
@@ -187,16 +176,104 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsSave }) => {
                 <option value="OpenAI">OpenAI</option>
                 <option value="Gemini">Gemini</option>
               </select>
-              <input type="password" placeholder="API Key" value={provider.apiKey} onChange={(e) => handleProviderChange(index, 'apiKey', e.target.value)} onBlur={() => handleFetchModels(provider)} className="p-3 bg-white/50 border border-slate-300 rounded-xl" />
+              <input type="password" placeholder="API Key" value={provider.apiKey} onChange={(e) => handleProviderChange(index, 'apiKey', e.target.value)} className="p-3 bg-white/50 border border-slate-300 rounded-xl" />
               <div className="col-span-2 flex items-center gap-2">
                 <select value={provider.model} onChange={(e) => handleProviderChange(index, 'model', e.target.value)} className="p-3 w-full bg-white/50 border border-slate-300 rounded-xl">
-                  {modelLists[provider.id] ? (
-                    modelLists[provider.id].map(model => <option key={model} value={model}>{model}</option>)
+                  {provider.name === 'OpenAI' ? (
+                    <>
+                      <option value="gpt-4-0613">gpt-4-0613</option>
+                      <option value="gpt-4">gpt-4</option>
+                      <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                      <option value="gpt-5-nano">gpt-5-nano</option>
+                      <option value="gpt-5">gpt-5</option>
+                      <option value="gpt-5-mini-2025-08-07">gpt-5-mini-2025-08-07</option>
+                      <option value="gpt-5-mini">gpt-5-mini</option>
+                      <option value="gpt-5-nano-2025-08-07">gpt-5-nano-2025-08-07</option>
+                      <option value="davinci-002">davinci-002</option>
+                      <option value="babbage-002">babbage-002</option>
+                      <option value="gpt-3.5-turbo-instruct">gpt-3.5-turbo-instruct</option>
+                      <option value="gpt-3.5-turbo-instruct-0914">gpt-3.5-turbo-instruct-0914</option>
+                      <option value="dall-e-3">dall-e-3</option>
+                      <option value="dall-e-2">dall-e-2</option>
+                      <option value="gpt-4-1106-preview">gpt-4-1106-preview</option>
+                      <option value="gpt-3.5-turbo-1106">gpt-3.5-turbo-1106</option>
+                      <option value="tts-1-hd">tts-1-hd</option>
+                      <option value="tts-1-1106">tts-1-1106</option>
+                      <option value="tts-1-hd-1106">tts-1-hd-1106</option>
+                      <option value="text-embedding-3-small">text-embedding-3-small</option>
+                      <option value="text-embedding-3-large">text-embedding-3-large</option>
+                      <option value="gpt-4-0125-preview">gpt-4-0125-preview</option>
+                      <option value="gpt-4-turbo-preview">gpt-4-turbo-preview</option>
+                      <option value="gpt-3.5-turbo-0125">gpt-3.5-turbo-0125</option>
+                      <option value="gpt-4-turbo">gpt-4-turbo</option>
+                      <option value="gpt-4-turbo-2024-04-09">gpt-4-turbo-2024-04-09</option>
+                      <option value="gpt-4o">gpt-4o</option>
+                      <option value="gpt-4o-2024-05-13">gpt-4o-2024-05-13</option>
+                      <option value="gpt-4o-mini-2024-07-18">gpt-4o-mini-2024-07-18</option>
+                      <option value="gpt-4o-mini">gpt-4o-mini</option>
+                      <option value="gpt-4o-2024-08-06">gpt-4o-2024-08-06</option>
+                      <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
+                      <option value="o1-mini-2024-09-12">o1-mini-2024-09-12</option>
+                      <option value="o1-mini">o1-mini</option>
+                      <option value="gpt-4o-realtime-preview-2024-10-01">gpt-4o-realtime-preview-2024-10-01</option>
+                      <option value="gpt-4o-audio-preview-2024-10-01">gpt-4o-audio-preview-2024-10-01</option>
+                      <option value="gpt-4o-audio-preview">gpt-4o-audio-preview</option>
+                      <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview</option>
+                      <option value="omni-moderation-latest">omni-moderation-latest</option>
+                      <option value="omni-moderation-2024-09-26">omni-moderation-2024-09-26</option>
+                      <option value="gpt-4o-realtime-preview-2024-12-17">gpt-4o-realtime-preview-2024-12-17</option>
+                      <option value="gpt-4o-audio-preview-2024-12-17">gpt-4o-audio-preview-2024-12-17</option>
+                      <option value="gpt-4o-mini-realtime-preview-2024-12-17">gpt-4o-mini-realtime-preview-2024-12-17</option>
+                      <option value="gpt-4o-mini-audio-preview-2024-12-17">gpt-4o-mini-audio-preview-2024-12-17</option>
+                      <option value="o1-2024-12-17">o1-2024-12-17</option>
+                      <option value="o1">o1</option>
+                      <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview</option>
+                      <option value="gpt-4o-mini-audio-preview">gpt-4o-mini-audio-preview</option>
+                      <option value="computer-use-preview">computer-use-preview</option>
+                      <option value="o3-mini">o3-mini</option>
+                      <option value="o3-mini-2025-01-31">o3-mini-2025-01-31</option>
+                      <option value="gpt-4o-2024-11-20">gpt-4o-2024-11-20</option>
+                      <option value="computer-use-preview-2025-03-11">computer-use-preview-2025-03-11</option>
+                      <option value="gpt-4o-search-preview-2025-03-11">gpt-4o-search-preview-2025-03-11</option>
+                      <option value="gpt-4o-search-preview">gpt-4o-search-preview</option>
+                      <option value="gpt-4o-mini-search-preview-2025-03-11">gpt-4o-mini-search-preview-2025-03-11</option>
+                      <option value="gpt-4o-mini-search-preview">gpt-4o-mini-search-preview</option>
+                      <option value="gpt-4o-transcribe">gpt-4o-transcribe</option>
+                      <option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe</option>
+                      <option value="o1-pro-2025-03-19">o1-pro-2025-03-19</option>
+                      <option value="o1-pro">o1-pro</option>
+                      <option value="gpt-4o-mini-tts">gpt-4o-mini-tts</option>
+                      <option value="o3-2025-04-16">o3-2025-04-16</option>
+                      <option value="o4-mini-2025-04-16">o4-mini-2025-04-16</option>
+                      <option value="o3">o3</option>
+                      <option value="o4-mini">o4-mini</option>
+                      <option value="gpt-4.1-2025-04-14">gpt-4.1-2025-04-14</option>
+                      <option value="gpt-4.1">gpt-4.1</option>
+                      <option value="gpt-4.1-mini-2025-04-14">gpt-4.1-mini-2025-04-14</option>
+                      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                      <option value="gpt-4.1-nano-2025-04-14">gpt-4.1-nano-2025-04-14</option>
+                      <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                      <option value="gpt-image-1">gpt-image-1</option>
+                      <option value="codex-mini-latest">codex-mini-latest</option>
+                      <option value="gpt-4o-realtime-preview-2025-06-03">gpt-4o-realtime-preview-2025-06-03</option>
+                      <option value="gpt-4o-audio-preview-2025-06-03">gpt-4o-audio-preview-2025-06-03</option>
+                      <option value="o4-mini-deep-research">o4-mini-deep-research</option>
+                      <option value="o4-mini-deep-research-2025-06-26">o4-mini-deep-research-2025-06-26</option>
+                      <option value="gpt-5-chat-latest">gpt-5-chat-latest</option>
+                      <option value="gpt-5-2025-08-07">gpt-5-2025-08-07</option>
+                      <option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</option>
+                      <option value="tts-1">tts-1</option>
+                      <option value="whisper-1">whisper-1</option>
+                      <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                    </>
                   ) : (
-                    <option value={provider.model}>{provider.model}</option>
+                    <>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                      <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                      <option value="gemini-1.0-pro">gemini-1.0-pro</option>
+                    </>
                   )}
                 </select>
-                <button onClick={() => handleFetchModels(provider)} className="p-3 bg-blue-500 text-white rounded-xl"><FiDownloadCloud /></button>
               </div>
             </div>
             <div className="flex items-center justify-between mt-4">

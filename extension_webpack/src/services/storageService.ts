@@ -91,7 +91,7 @@ export const getUserProfile = (): Promise<UserProfile | null> => {
         education: [],
         skills: [],
         resumes: [],
-        settings: { autoFillEnabled: true, aiRecommendationsEnabled: true, passcodeEnabled: false, apiProviders: [] },
+        settings: { passcodeEnabled: false, apiProviders: [] },
       });
     }
   });

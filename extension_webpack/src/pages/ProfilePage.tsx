@@ -10,8 +10,6 @@ const defaultProfile: UserProfile = {
   skills: [],
   resumes: [],
   settings: {
-    autoFillEnabled: true,
-    aiRecommendationsEnabled: true,
     passcodeEnabled: false,
     apiProviders: [],
   }
