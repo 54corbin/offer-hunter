@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FiSearch, FiExternalLink, FiMapPin, FiDollarSign, FiFileText, FiLoader, FiMail } from 'react-icons/fi';
+import { FiSearch, FiExternalLink, FiMapPin, FiFileText, FiLoader, FiMail } from 'react-icons/fi';
 import { getUserProfile, UserProfile, Resume, getJobsForResume, saveUserProfile } from '../services/storageService';
+import { fetchLocationSuggestions, LocationSuggestion } from '../services/seekService';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ResumeReviewModal from '../components/ResumeReviewModal';
 import CoverLetterReviewModal from '../components/CoverLetterReviewModal';
@@ -18,14 +19,32 @@ const JobsPage: React.FC = () => {
   const [generatedResumeText, setGeneratedResumeText] = useState('');
   const [generatedCoverLetterText, setGeneratedCoverLetterText] = useState('');
   const [currentJob, setCurrentJob] = useState<any>(null);
-  const [classification, setClassification] = useState('');
   const [location, setLocation] = useState('');
-  const [workType, setWorkType] = useState('');
-  const [salary, setSalary] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([]);
+  const [daterange, setDaterange] = useState('');
 
-  const classifications = ["Accounting", "Administration & Office Support", "Advertising, Arts & Media", "Banking & Financial Services", "Call Centre & Customer Service", "Education & Training", "Government & Defence", "Healthcare & Medical", "Sales"];
-  const workTypes = ["Full-time", "Part-time", "Casual", "Contract/Temp"];
+  const workTypesMap: { [key: string]: string } = {
+    "Full-time": "242",
+    "Part-time": "243",
+    "Contract/Temp": "244",
+    "Casual/Vacation": "245",
+  };
 
+  const dateRanges: { [key: string]: number } = {
+    "Today": 1,
+    "Last 3 days": 3,
+    "Last 7 days": 7,
+    "Last 14 days": 14,
+  };
+
+  const handleWorkTypeChange = (workTypeCode: string) => {
+    setSelectedWorkTypes(prev =>
+      prev.includes(workTypeCode)
+        ? prev.filter(code => code !== workTypeCode)
+        : [...prev, workTypeCode]
+    );
+  };
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
@@ -83,6 +102,26 @@ const JobsPage: React.FC = () => {
     return () => chrome.runtime.onMessage.removeListener(messageListener);
   }, [fetchJobsForTab, selectedResumeId]);
 
+  useEffect(() => {
+    const handler = setTimeout(async () => {
+      if (location) {
+        const suggestions = await fetchLocationSuggestions(location);
+        setLocationSuggestions(suggestions);
+      } else {
+        setLocationSuggestions([]);
+      }
+    }, 300); // 300ms debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [location]);
+
+  const handleSuggestionClick = (suggestion: LocationSuggestion) => {
+    setLocation(suggestion.text);
+    setLocationSuggestions([]); // Hide suggestions after selection
+  };
+
   const handleDiscoverJobs = () => {
     if (selectedResumeId) {
       setIsLoading(true);
@@ -91,10 +130,9 @@ const JobsPage: React.FC = () => {
         type: "FETCH_JOBS_FROM_SEEK",
         resumeId: selectedResumeId,
         filters: {
-          classification,
           location,
-          workType,
-          salary,
+          workType: selectedWorkTypes,
+          daterange: daterange ? Number(daterange) : undefined,
         },
       });
     }
@@ -200,13 +238,28 @@ const JobsPage: React.FC = () => {
           {profile && profile.resumes && profile.resumes.length > 0 ? (
             <div className="border-b border-gray-200">
               <div className="flex items-center space-x-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="Location (e.g. Melbourne)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="p-2 border rounded"
-                />
+                <div className="relative flex-grow">
+                  <input
+                    type="text"
+                    placeholder="Location (e.g. Melbourne)"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="p-2 border rounded w-full"
+                  />
+                  {locationSuggestions.length > 0 && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
+                      {locationSuggestions.map((suggestion, index) => (
+                        <li 
+                          key={index} 
+                          className="p-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          {suggestion.text}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 <select
                   value={daterange}
                   onChange={(e) => setDaterange(e.target.value)}
@@ -274,7 +327,6 @@ const JobsPage: React.FC = () => {
                     <p className="text-gray-600 mt-1">{job.company}</p>
                     <div className="space-y-2 mt-4 text-sm text-gray-500">
                       {job.location && ( <div className="flex items-center"> <FiMapPin className="mr-2 flex-shrink-0" /> <span>{job.location}</span> </div> )}
-                      {job.salary && ( <div className="flex items-center"> <FiDollarSign className="mr-2 flex-shrink-0" /> <span>{job.salary}</span> </div> )}
                     </div>
                     <p className="text-sm text-gray-600 mt-4 h-16 overflow-hidden text-ellipsis">{job.summary || 'No summary available.'}</p>
                   </div>
@@ -320,17 +372,6 @@ const JobsPage: React.FC = () => {
             !isProfileLoading && (
               <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
                 <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs for this resume.</h3>
-                <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>
-              </div>
-            )
-          )}
-        </>
-      )}
-    </div>
-  );
-};
-
-export default JobsPage; for this resume.</h3>
                 <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>
               </div>
             )
