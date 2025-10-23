@@ -202,19 +202,37 @@ const JobsPage: React.FC = () => {
               <div className="flex items-center space-x-4 mb-4">
                 <input
                   type="text"
-                  placeholder="Location"
+                  placeholder="Location (e.g. Melbourne)"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="p-2 border rounded"
                 />
                 <select
-                  value={workType}
-                  onChange={(e) => setWorkType(e.target.value)}
+                  value={daterange}
+                  onChange={(e) => setDaterange(e.target.value)}
                   className="p-2 border rounded"
                 >
-                  <option value="">All Work Types</option>
-                  {workTypes.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+                  <option value="">Any time</option>
+                  {Object.entries(dateRanges).map(([name, value]) => (
+                    <option key={value} value={value}>{name}</option>
+                  ))}
                 </select>
+              </div>
+              <div className="flex items-center space-x-4 mb-4">
+                <p className="font-medium">Work types:</p>
+                {Object.entries(workTypesMap).map(([name, code]) => (
+                  <div key={code} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={code}
+                      value={code}
+                      checked={selectedWorkTypes.includes(code)}
+                      onChange={() => handleWorkTypeChange(code)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={code} className="ml-2 text-sm text-gray-700">{name}</label>
+                  </div>
+                ))}
               </div>
               <nav className="-mb-px flex space-x-8 items-center" aria-label="Tabs">
                 {profile.resumes.map(resume => (
