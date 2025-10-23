@@ -1,8 +1,9 @@
-import { getUserProfile, UserProfile, ApiProvider } from './storageService';
-import OpenAI from 'openai';
+import { getUserProfile, UserProfile, ApiProvider } from "./storageService";
+import OpenAI from "openai";
 
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
 type Headers = {
   [key: string]: string;
@@ -11,18 +12,20 @@ type Headers = {
 const getLlmApiCallConfig = async () => {
   const profile = await getUserProfile();
   const activeProviderId = profile?.settings?.activeAiProviderId;
-  const provider = profile?.settings?.apiProviders?.find(p => p.id === activeProviderId);
+  const provider = profile?.settings?.apiProviders?.find(
+    (p) => p.id === activeProviderId,
+  );
 
   if (!provider || !provider.apiKey) {
     console.error("Active AI provider or API key not found.");
     return null;
   }
 
-  if (provider.name === 'Gemini') {
+  if (provider.name === "Gemini") {
     return {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`,
-      headers: { 'Content-Type': 'application/json' },
-      provider: 'gemini',
+      headers: { "Content-Type": "application/json" },
+      provider: "gemini",
     };
   }
 
@@ -30,25 +33,32 @@ const getLlmApiCallConfig = async () => {
   return {
     url: OPENAI_API_URL,
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${provider.apiKey}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${provider.apiKey}`,
     },
     model: provider.model,
-    provider: 'openai',
+    provider: "openai",
   };
 };
 
-export const generateContent = async (prompt: string): Promise<string | null> => {
+export const generateContent = async (
+  prompt: string,
+): Promise<string | null> => {
   const config = await getLlmApiCallConfig();
   if (!config) return null;
 
-  const body = config.provider === 'gemini'
-    ? { contents: [{ parts: [{ text: prompt }] }] }
-    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 };
+  const body =
+    config.provider === "gemini"
+      ? { contents: [{ parts: [{ text: prompt }] }] }
+      : {
+          model: config.model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+        };
 
   try {
     const response = await fetch(config.url, {
-      method: 'POST',
+      method: "POST",
       headers: config.headers as Headers,
       body: JSON.stringify(body),
     });
@@ -60,7 +70,7 @@ export const generateContent = async (prompt: string): Promise<string | null> =>
     }
 
     const data = await response.json();
-    if (config.provider === 'gemini') {
+    if (config.provider === "gemini") {
       return data.candidates[0]?.content.parts[0].text || null;
     }
     return data.choices[0]?.message?.content || null;
@@ -70,7 +80,10 @@ export const generateContent = async (prompt: string): Promise<string | null> =>
   }
 };
 
-export const getMatchScore = async (jobDetails: any, resumeText: string): Promise<{score: number, summary: string} | null> => {
+export const getMatchScore = async (
+  jobDetails: any,
+  resumeText: string,
+): Promise<{ score: number; summary: string } | null> => {
   const config = await getLlmApiCallConfig();
   if (!config) return null;
 
@@ -89,13 +102,18 @@ export const getMatchScore = async (jobDetails: any, resumeText: string): Promis
     ---
   `;
 
-  const body = config.provider === 'gemini'
-    ? { contents: [{ parts: [{ text: prompt }] }] }
-    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 };
+  const body =
+    config.provider === "gemini"
+      ? { contents: [{ parts: [{ text: prompt }] }] }
+      : {
+          model: config.model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+        };
 
   try {
     const response = await fetch(config.url, {
-      method: 'POST',
+      method: "POST",
       headers: config.headers as Headers,
       body: JSON.stringify(body),
     });
@@ -107,18 +125,24 @@ export const getMatchScore = async (jobDetails: any, resumeText: string): Promis
     }
 
     const data = await response.json();
-    const content = config.provider === 'gemini'
-      ? data.candidates[0]?.content.parts[0].text
-      : data.choices[0]?.message?.content;
+    const content =
+      config.provider === "gemini"
+        ? data.candidates[0]?.content.parts[0].text
+        : data.choices[0]?.message?.content;
 
     if (content) {
       try {
         const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
         let jsonString = jsonMatch ? jsonMatch[1] : content;
-        jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+        jsonString = jsonString.replace(/,\s*([}\]])/g, "$1");
         return JSON.parse(jsonString);
       } catch (e) {
-        console.error("Failed to parse LLM response JSON:", e, "Raw content:", content);
+        console.error(
+          "Failed to parse LLM response JSON:",
+          e,
+          "Raw content:",
+          content,
+        );
         return { score: 0, summary: "Could not analyze relevance." };
       }
     } else {
@@ -129,9 +153,11 @@ export const getMatchScore = async (jobDetails: any, resumeText: string): Promis
     console.error("Error calling LLM API:", error);
     return null;
   }
-}
+};
 
-export const extractProfileFromResume = async (resumeText: string): Promise<Partial<UserProfile> | null> => {
+export const extractProfileFromResume = async (
+  resumeText: string,
+): Promise<Partial<UserProfile> | null> => {
   const config = await getLlmApiCallConfig();
   if (!config) return null;
 
@@ -157,13 +183,18 @@ export const extractProfileFromResume = async (resumeText: string): Promise<Part
     ---
   `;
 
-  const body = config.provider === 'gemini'
-    ? { contents: [{ parts: [{ text: prompt }] }] }
-    : { model: config.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 };
+  const body =
+    config.provider === "gemini"
+      ? { contents: [{ parts: [{ text: prompt }] }] }
+      : {
+          model: config.model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+        };
 
   try {
     const response = await fetch(config.url, {
-      method: 'POST',
+      method: "POST",
       headers: config.headers as Headers,
       body: JSON.stringify(body),
     });
@@ -175,14 +206,15 @@ export const extractProfileFromResume = async (resumeText: string): Promise<Part
     }
 
     const data = await response.json();
-    const content = config.provider === 'gemini'
-      ? data.candidates[0]?.content.parts[0].text
-      : data.choices[0]?.message?.content;
+    const content =
+      config.provider === "gemini"
+        ? data.candidates[0]?.content.parts[0].text
+        : data.choices[0]?.message?.content;
 
     if (content) {
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       const jsonString = jsonMatch ? jsonMatch[1] : content;
-      
+
       try {
         return JSON.parse(jsonString);
       } catch (e) {
@@ -199,22 +231,32 @@ export const extractProfileFromResume = async (resumeText: string): Promise<Part
   }
 };
 
-export const listModels = async (provider: ApiProvider): Promise<string[] | null> => {
-  if (provider.name === 'Gemini') {
+export const listModels = async (
+  provider: ApiProvider,
+): Promise<string[] | null> => {
+  if (provider.name === "Gemini") {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${provider.apiKey}`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${provider.apiKey}`,
+      );
       if (!response.ok) return null;
       const data = await response.json();
-      return data.models.map((m: any) => m.name.replace('models/', '')).filter((m: string) => m.includes('gemini'));
+      return data.models
+        .map((m: any) => m.name.replace("models/", ""))
+        .filter((m: string) => m.includes("gemini"));
     } catch (error) {
       console.error("Error fetching Gemini models:", error);
       return null;
     }
-  } else { // OpenAI
+  } else {
+    // OpenAI
     try {
-      const openai = new OpenAI({ apiKey: provider.apiKey, dangerouslyAllowBrowser: true });
+      const openai = new OpenAI({
+        apiKey: provider.apiKey,
+        dangerouslyAllowBrowser: true,
+      });
       const models = await openai.models.list();
-      return models.data.map(m => m.id).filter(id => id.includes('gpt'));
+      return models.data.map((m) => m.id).filter((id) => id.includes("gpt"));
     } catch (error) {
       console.error("Error fetching OpenAI models:", error);
       return null;
@@ -222,9 +264,11 @@ export const listModels = async (provider: ApiProvider): Promise<string[] | null
   }
 };
 
-export const extractKeywordsFromResume = async (resumeText: string): Promise<string[]> => {
+export const extractKeywordsFromResume = async (
+  resumeText: string,
+): Promise<string[]> => {
   const prompt = `
-    Based on the following resume text, extract the most relevant keywords for a job search.
+    Based on the following resume text, extract 3 most relevant keywords for a job search.
     Return a JSON array of 5-10 strings.
 
     Resume Text:
@@ -238,19 +282,22 @@ export const extractKeywordsFromResume = async (resumeText: string): Promise<str
     try {
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       let jsonString = jsonMatch ? jsonMatch[1] : content;
-      jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+      jsonString = jsonString.replace(/,\s*([}\]])/g, "$1");
       const keywords = JSON.parse(jsonString);
-      if (Array.isArray(keywords) && keywords.every(k => typeof k === 'string')) {
+      if (
+        Array.isArray(keywords) &&
+        keywords.every((k) => typeof k === "string")
+      ) {
         return keywords;
       }
-      if (typeof keywords === 'string') {
-        return keywords.split(' ');
+      if (typeof keywords === "string") {
+        return keywords.split(" ");
       }
       return [];
     } catch (e) {
       console.error("Failed to parse keywords from LLM response:", e);
-      if (typeof content === 'string') {
-        return content.split(' ');
+      if (typeof content === "string") {
+        return content.split(" ");
       }
       return [];
     }
@@ -261,7 +308,7 @@ export const extractKeywordsFromResume = async (resumeText: string): Promise<str
 export const generateAnswerForQuestion = async (
   question: string,
   jobDescription: string,
-  resumeText: string
+  resumeText: string,
 ): Promise<string | null> => {
   const prompt = `
     You are a professional career coach helping a candidate apply for a job.
@@ -291,7 +338,7 @@ export const generateAnswerForQuestion = async (
 
 export const generateResumeForJob = async (
   jobDetails: any,
-  resumeText: string
+  resumeText: string,
 ): Promise<string | null> => {
   const prompt = `
     You are a professional resume writer. Your task is to rewrite the following resume to be tailored for the given job description.
@@ -316,7 +363,7 @@ export const generateResumeForJob = async (
 
 export const generateCoverLetterForJob = async (
   jobDetails: any,
-  resumeText: string
+  resumeText: string,
 ): Promise<string | null> => {
   const prompt = `
     You are a professional career coach. Your task is to write a compelling and professional cover letter for a job application.

@@ -1,6 +1,17 @@
-import { getUserProfile, saveJobsForResume, getJobsForResume, saveUserProfile } from '../services/storageService';
-import { getMatchScore, extractKeywordsFromResume, generateAnswerForQuestion, generateResumeForJob, generateCoverLetterForJob } from '../services/llmService';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import {
+  getUserProfile,
+  saveJobsForResume,
+  getJobsForResume,
+  saveUserProfile,
+} from "../services/storageService";
+import {
+  getMatchScore,
+  extractKeywordsFromResume,
+  generateAnswerForQuestion,
+  generateResumeForJob,
+  generateCoverLetterForJob,
+} from "../services/llmService";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 let isCancelled = false;
 
@@ -13,7 +24,7 @@ async function createPdf(text: string): Promise<Uint8Array> {
   const margin = 50;
   const textWidth = width - 2 * margin;
 
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   let y = height - margin;
 
   for (const line of lines) {
@@ -46,18 +57,26 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.action.onClicked.addListener((tab) => {
   chrome.tabs.create({
-    url: 'index.html#/'
+    url: "index.html#/",
   });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'TRIGGER_AUTOFILL' && message.tabId && message.resumeId) {
+  if (
+    message.type === "TRIGGER_AUTOFILL" &&
+    message.tabId &&
+    message.resumeId
+  ) {
     triggerAutofill(message.tabId, message.resumeId);
     sendResponse({ status: "ok" });
-  } else if (message.type === 'GENERATE_ANSWER') {
-    handleGenerateAnswer(message.questionText, message.jobDescription, sender.tab?.id)
-      .then(answer => sendResponse({ answer }))
-      .catch(error => sendResponse({ error: error.message }));
+  } else if (message.type === "GENERATE_ANSWER") {
+    handleGenerateAnswer(
+      message.questionText,
+      message.jobDescription,
+      sender.tab?.id,
+    )
+      .then((answer) => sendResponse({ answer }))
+      .catch((error) => sendResponse({ error: error.message }));
     return true;
   } else if (message.type === "FETCH_JOBS_FROM_SEEK") {
     isCancelled = false;
@@ -83,22 +102,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-async function handleGenerateAnswer(questionText: string, jobDescription: string, tabId: number | undefined) {
+async function handleGenerateAnswer(
+  questionText: string,
+  jobDescription: string,
+  tabId: number | undefined,
+) {
   if (!tabId) throw new Error("Tab ID not provided.");
-  
+
   const profile = await getUserProfile();
   if (!profile || !profile.resumes || profile.resumes.length === 0) {
     throw new Error("No profile or resumes found.");
   }
-  
+
   // Since there's no global active resume, we'll use the first one for now.
   // A future improvement could be to ask the user which resume to use for generating answers.
   const resume = profile.resumes[0];
   if (!resume) throw new Error("No resume found.");
 
-  const answer = await generateAnswerForQuestion(questionText, jobDescription, resume.text);
-  
-  const responseType = answer ? 'ANSWER_GENERATED' : 'ANSWER_FAILED';
+  const answer = await generateAnswerForQuestion(
+    questionText,
+    jobDescription,
+    resume.text,
+  );
+
+  const responseType = answer ? "ANSWER_GENERATED" : "ANSWER_FAILED";
   chrome.tabs.sendMessage(tabId, {
     type: responseType,
     questionText: questionText,
@@ -116,8 +143,8 @@ async function triggerAutofill(tabId: number, resumeId?: string) {
   const profile = await getUserProfile();
   // If a specific resumeId is provided, find that resume.
   // Otherwise, fall back to the first resume in the list.
-  const resume = resumeId 
-    ? profile?.resumes?.find(r => r.id === resumeId)
+  const resume = resumeId
+    ? profile?.resumes?.find((r) => r.id === resumeId)
     : profile?.resumes?.[0];
 
   if (!profile || !resume) {
@@ -132,7 +159,7 @@ async function triggerAutofill(tabId: number, resumeId?: string) {
       files: ["autofill.bundle.js"],
     });
     await chrome.tabs.sendMessage(tabId, {
-      type: 'AUTOFILL_DATA',
+      type: "AUTOFILL_DATA",
       profile: profile,
       resume: resume,
     });
@@ -141,9 +168,46 @@ async function triggerAutofill(tabId: number, resumeId?: string) {
   }
 }
 
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, "-").replace(/\//g, "-");
+}
+
+function buildSeekUrl(
+  keywords: string[],
+  location: string = "All-Australia",
+  worktypes?: string[],
+  daterange?: number,
+  page?: number,
+): string {
+  const baseUrl = "https://www.seek.com.au";
+
+  const keywordSlug = slugify(keywords.join(" "));
+  let path = `/${keywordSlug}-jobs`;
+
+  path += `/in-${location}`;
+
+  const queryParams = new URLSearchParams();
+  if (worktypes && worktypes.length > 0) {
+    queryParams.append("worktype", worktypes.join(","));
+  }
+  if (daterange) {
+    queryParams.append("daterange", daterange.toString());
+  }
+  if (page) {
+    queryParams.append("page", page.toString());
+  }
+
+  let url = baseUrl + path;
+  if (queryParams.toString()) {
+    url += `?${queryParams.toString()}`;
+  }
+
+  return url;
+}
+
 async function fetchAndScrapeJobs(resumeId: string, filters: any) {
   const profile = await getUserProfile();
-  const resume = profile?.resumes?.find(r => r.id === resumeId);
+  const resume = profile?.resumes?.find((r) => r.id === resumeId);
 
   if (!resume) {
     console.error("Could not find the specified resume to start job search.");
@@ -158,32 +222,36 @@ async function fetchAndScrapeJobs(resumeId: string, filters: any) {
     return;
   }
 
-  const { classification, location, workType, salary } = filters;
-  const keywordString = encodeURIComponent(keywords.join('-'));
-  let seekUrl = `https://www.seek.com.au/${keywordString}-jobs`;
+  const { location, workType, daterange, page } =
+    filters;
 
-  const queryParams = new URLSearchParams();
-  if (classification) queryParams.append('classification', classification);
-  if (location) queryParams.append('where', location);
-  if (workType) queryParams.append('work_type', workType);
-  if (salary) queryParams.append('salaryrange', salary);
+  const seekUrl = buildSeekUrl(
+    keywords,
+    location,
+    workType,
+    daterange,
+    page,
+  );
+  console.info("SeekUrl: " + seekUrl);
 
-  if (queryParams.toString()) {
-    seekUrl += `?${queryParams.toString()}`;
-  }
-  
   chrome.tabs.create({ url: seekUrl, active: false }, (tab) => {
     if (tab.id) {
       const tabId = tab.id;
       setTimeout(() => {
-        chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ["seek.bundle.js"],
-        }, () => {
-          // Pass resumeId to the content script after injection
-          chrome.tabs.sendMessage(tabId, { type: "INITIATE_SCRAPE", resumeId: resumeId });
-          setTimeout(() => chrome.tabs.remove(tabId), 2000);
-        });
+        chrome.scripting.executeScript(
+          {
+            target: { tabId: tabId },
+            files: ["seek.bundle.js"],
+          },
+          () => {
+            // Pass resumeId to the content script after injection
+            chrome.tabs.sendMessage(tabId, {
+              type: "INITIATE_SCRAPE",
+              resumeId: resumeId,
+            });
+            setTimeout(() => chrome.tabs.remove(tabId), 2000);
+          },
+        );
       }, 5000);
     }
   });
@@ -191,14 +259,14 @@ async function fetchAndScrapeJobs(resumeId: string, filters: any) {
 
 async function handleScrapedJobs(jobs: any[], resumeId: string) {
   const profile = await getUserProfile();
-  const resume = profile?.resumes?.find(r => r.id === resumeId);
+  const resume = profile?.resumes?.find((r) => r.id === resumeId);
 
   if (!resume) {
     console.log("Specified resume not found for matching jobs.");
     chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
     return;
   }
-  
+
   const resumeSummaryText = resume.text;
   const scoredJobs = [];
   for (let i = 0; i < jobs.length; i++) {
@@ -218,10 +286,12 @@ async function handleScrapedJobs(jobs: any[], resumeId: string) {
   if (!isCancelled) {
     const existingJobs = await getJobsForResume(resumeId);
     const newJobs = [...existingJobs, ...scoredJobs];
-    const uniqueJobs = Array.from(new Map(newJobs.map(job => [job.url, job])).values());
+    const uniqueJobs = Array.from(
+      new Map(newJobs.map((job) => [job.url, job])).values(),
+    );
     await saveJobsForResume(resumeId, uniqueJobs);
   }
-  
+
   chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
 }
 
@@ -233,7 +303,7 @@ async function handleGenerateResumeForJob(job: any, resumeId: string) {
     return;
   }
 
-  const resume = profile.resumes?.find(r => r.id === resumeId);
+  const resume = profile.resumes?.find((r) => r.id === resumeId);
 
   if (!resume) {
     console.error("Could not find the specified resume to generate a new one.");
@@ -257,10 +327,10 @@ async function handleGenerateResumeForJob(job: any, resumeId: string) {
     profile.resumes.push(newResume);
     await saveUserProfile(profile);
 
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage({
       type: "RESUME_GENERATION_SUCCESS",
       resumeText: newResumeText,
-      job: job
+      job: job,
     });
   } else {
     chrome.runtime.sendMessage({ type: "RESUME_GENERATION_COMPLETE" });
@@ -268,7 +338,7 @@ async function handleGenerateResumeForJob(job: any, resumeId: string) {
 }
 
 function Uint8ArrayToBase64(array: Uint8Array) {
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < array.byteLength; i++) {
     binary += String.fromCharCode(array[i]);
   }
@@ -279,12 +349,12 @@ async function handleDownloadResume(resumeText: string, jobTitle: string) {
   const pdfBytes = await createPdf(resumeText);
   const base64Data = Uint8ArrayToBase64(pdfBytes);
   const dataUrl = `data:application/pdf;base64,${base64Data}`;
-  const filename = `resume_${jobTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+  const filename = `resume_${jobTitle.replace(/[^a-z0-9]/gi, "_")}.pdf`;
 
   await chrome.downloads.download({
     url: dataUrl,
     filename: filename,
-    saveAs: true
+    saveAs: true,
   });
 }
 
@@ -296,10 +366,12 @@ async function handleGenerateCoverLetterForJob(job: any, resumeId: string) {
     return;
   }
 
-  const resume = profile.resumes?.find(r => r.id === resumeId);
+  const resume = profile.resumes?.find((r) => r.id === resumeId);
 
   if (!resume) {
-    console.error("Could not find the specified resume to generate a cover letter.");
+    console.error(
+      "Could not find the specified resume to generate a cover letter.",
+    );
     chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });
     return;
   }
@@ -307,10 +379,10 @@ async function handleGenerateCoverLetterForJob(job: any, resumeId: string) {
   const coverLetter = await generateCoverLetterForJob(job, resume.text);
 
   if (coverLetter) {
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage({
       type: "COVER_LETTER_GENERATION_SUCCESS",
       coverLetter: coverLetter,
-      job: job
+      job: job,
     });
   } else {
     chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });

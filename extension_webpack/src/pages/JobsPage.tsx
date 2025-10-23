@@ -200,14 +200,6 @@ const JobsPage: React.FC = () => {
           {profile && profile.resumes && profile.resumes.length > 0 ? (
             <div className="border-b border-gray-200">
               <div className="flex items-center space-x-4 mb-4">
-                <select
-                  value={classification}
-                  onChange={(e) => setClassification(e.target.value)}
-                  className="p-2 border rounded"
-                >
-                  <option value="">All Classifications</option>
-                  {classifications.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
                 <input
                   type="text"
                   placeholder="Location"
@@ -223,13 +215,6 @@ const JobsPage: React.FC = () => {
                   <option value="">All Work Types</option>
                   {workTypes.map(wt => <option key={wt} value={wt}>{wt}</option>)}
                 </select>
-                <input
-                  type="text"
-                  placeholder="Salary"
-                  value={salary}
-                  onChange={(e) => setSalary(e.target.value)}
-                  className="p-2 border rounded"
-                />
               </div>
               <nav className="-mb-px flex space-x-8 items-center" aria-label="Tabs">
                 {profile.resumes.map(resume => (
@@ -317,6 +302,17 @@ const JobsPage: React.FC = () => {
             !isProfileLoading && (
               <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
                 <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs for this resume.</h3>
+                <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>
+              </div>
+            )
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default JobsPage; for this resume.</h3>
                 <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>
               </div>
             )
