@@ -225,10 +225,6 @@ const JobsPage: React.FC = () => {
         onCopy={handleCopyToClipboard}
         coverLetterText={generatedCoverLetterText}
       />
-      <div className="flex justify-between items-center">
-        <h2 className="text-5xl font-bold text-slate-800">Recommended Jobs</h2>
-      </div>
-
       {isProfileLoading ? (
         <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
           <h3 className="text-3xl font-semibold text-slate-700">Loading Profile...</h3>
@@ -236,22 +232,23 @@ const JobsPage: React.FC = () => {
       ) : (
         <>
           {profile && profile.resumes && profile.resumes.length > 0 ? (
-            <div className="border-b border-gray-200">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="relative flex-grow">
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200/80">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="relative md:col-span-2">
+                  <FiMapPin className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Location (e.g. Melbourne)"
+                    placeholder="Location (e.g. Melbourne, VIC)"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="p-2 border rounded w-full"
+                    className="w-full rounded-lg border-slate-300 pl-10 pr-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
                   />
                   {locationSuggestions.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
+                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
                       {locationSuggestions.map((suggestion, index) => (
                         <li 
                           key={index} 
-                          className="p-2 hover:bg-gray-100 cursor-pointer"
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-slate-700"
                           onClick={() => handleSuggestionClick(suggestion)}
                         >
                           {suggestion.text}
@@ -263,7 +260,7 @@ const JobsPage: React.FC = () => {
                 <select
                   value={daterange}
                   onChange={(e) => setDaterange(e.target.value)}
-                  className="p-2 border rounded"
+                  className="w-full rounded-lg border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
                 >
                   <option value="">Any time</option>
                   {Object.entries(dateRanges).map(([name, value]) => (
@@ -271,45 +268,52 @@ const JobsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center space-x-4 mb-4">
-                <p className="font-medium">Work types:</p>
+
+              <div className="flex items-center gap-2 flex-wrap mb-6">
+                <p className="font-medium text-slate-600 mr-2 shrink-0">Work types:</p>
                 {Object.entries(workTypesMap).map(([name, code]) => (
-                  <div key={code} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={code}
-                      value={code}
-                      checked={selectedWorkTypes.includes(code)}
-                      onChange={() => handleWorkTypeChange(code)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label htmlFor={code} className="ml-2 text-sm text-gray-700">{name}</label>
-                  </div>
-                ))}
-              </div>
-              <nav className="-mb-px flex space-x-8 items-center" aria-label="Tabs">
-                {profile.resumes.map(resume => (
                   <button
-                    key={resume.id}
-                    onClick={() => handleResumeTabClick(resume.id)}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                      selectedResumeId === resume.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    key={code}
+                    onClick={() => handleWorkTypeChange(code)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105 ${
+                      selectedWorkTypes.includes(code)
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
-                    {resume.name}
+                    {name}
                   </button>
                 ))}
-                <button
-                  onClick={handleDiscoverJobs}
-                  className="ml-auto flex items-center bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
-                  disabled={!selectedResumeId}
-                >
-                  <FiSearch className="mr-2" />
-                  Refresh Jobs
-                </button>
-              </nav>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <nav className="flex items-center flex-wrap gap-x-6 gap-y-2" aria-label="Tabs">
+                    <span className="font-semibold text-slate-700">Select Resume:</span>
+                    {profile.resumes.map(resume => (
+                      <button
+                        key={resume.id}
+                        onClick={() => handleResumeTabClick(resume.id)}
+                        className={`whitespace-nowrap pb-2 px-1 border-b-4 font-medium text-base transition-colors duration-200 ${
+                          selectedResumeId === resume.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        {resume.name}
+                      </button>
+                    ))}
+                  </nav>
+                  <button
+                    onClick={handleDiscoverJobs}
+                    className="flex items-center justify-center w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!selectedResumeId}
+                  >
+                    <FiSearch className="mr-2" />
+                    Find Matching Jobs
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
