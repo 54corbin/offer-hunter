@@ -113,7 +113,11 @@ const JobsPage: React.FC = () => {
     const handler = setTimeout(async () => {
       if (location) {
         const suggestions = await fetchLocationSuggestions(location);
-        setLocationSuggestions(suggestions);
+        if (suggestions.length === 1 && suggestions[0].text === location) {
+          setLocationSuggestions([]);
+        } else {
+          setLocationSuggestions(suggestions);
+        }
       } else {
         setLocationSuggestions([]);
       }
@@ -264,8 +268,8 @@ const JobsPage: React.FC = () => {
         <>
           {profile && profile.resumes && profile.resumes.length > 0 ? (
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200/80">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="relative md:col-span-2">
+              <div className="flex flex-wrap items-center gap-4 mb-6">
+                <div className="relative flex-grow" style={{ flexBasis: '300px' }}>
                   <FiMapPin className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -277,8 +281,8 @@ const JobsPage: React.FC = () => {
                   {locationSuggestions.length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
                       {locationSuggestions.map((suggestion, index) => (
-                        <li 
-                          key={index} 
+                        <li
+                          key={index}
                           className="p-3 hover:bg-blue-50 cursor-pointer text-slate-700"
                           onClick={() => handleSuggestionClick(suggestion)}
                         >
@@ -288,33 +292,34 @@ const JobsPage: React.FC = () => {
                     </ul>
                   )}
                 </div>
-                <select
-                  value={daterange}
-                  onChange={(e) => setDaterange(e.target.value)}
-                  className="w-full rounded-lg border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
-                >
-                  <option value="">Any time</option>
-                  {Object.entries(dateRanges).map(([name, value]) => (
-                    <option key={value} value={value}>{name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap mb-6">
-                <p className="font-medium text-slate-600 mr-2 shrink-0">Work types:</p>
-                {Object.entries(workTypesMap).map(([name, code]) => (
-                  <button
-                    key={code}
-                    onClick={() => handleWorkTypeChange(code)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105 ${
-                      selectedWorkTypes.includes(code)
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                <div className="flex-shrink-0">
+                  <select
+                    value={daterange}
+                    onChange={(e) => setDaterange(e.target.value)}
+                    className="rounded-lg border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
                   >
-                    {name}
-                  </button>
-                ))}
+                    <option value="">Any time</option>
+                    {Object.entries(dateRanges).map(([name, value]) => (
+                      <option key={value} value={value}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-slate-600 mr-2 shrink-0">Work types:</p>
+                  {Object.entries(workTypesMap).map(([name, code]) => (
+                    <button
+                      key={code}
+                      onClick={() => handleWorkTypeChange(code)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105 ${
+                        selectedWorkTypes.includes(code)
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
