@@ -62,6 +62,13 @@ const JobsPage: React.FC = () => {
       if (initialResumeId) {
         setSelectedResumeId(initialResumeId);
         fetchJobsForTab(initialResumeId);
+
+        const initialResume = profile.resumes?.find(r => r.id === initialResumeId);
+        if (initialResume?.filters) {
+          setLocation(initialResume.filters.location || '');
+          setSelectedWorkTypes(initialResume.filters.workType || []);
+          setDaterange(initialResume.filters.daterange || '');
+        }
       }
       setIsProfileLoading(false);
     });
@@ -122,10 +129,23 @@ const JobsPage: React.FC = () => {
     setLocationSuggestions([]); // Hide suggestions after selection
   };
 
-  const handleDiscoverJobs = () => {
-    if (selectedResumeId) {
+  const handleDiscoverJobs = async () => {
+    if (selectedResumeId && profile) {
       setIsLoading(true);
       setProgress(0);
+
+      const updatedResumes = profile.resumes?.map(r => 
+        r.id === selectedResumeId 
+          ? { ...r, filters: { location, workType: selectedWorkTypes, daterange } } 
+          : r
+      );
+
+      if (updatedResumes) {
+        const updatedProfile = { ...profile, resumes: updatedResumes };
+        setProfile(updatedProfile);
+        await saveUserProfile(updatedProfile);
+      }
+
       chrome.runtime.sendMessage({
         type: "FETCH_JOBS_FROM_SEEK",
         resumeId: selectedResumeId,
@@ -192,6 +212,17 @@ const JobsPage: React.FC = () => {
     fetchJobsForTab(resumeId);
 
     if (profile) {
+      const selectedResume = profile.resumes?.find(r => r.id === resumeId);
+      if (selectedResume?.filters) {
+        setLocation(selectedResume.filters.location || '');
+        setSelectedWorkTypes(selectedResume.filters.workType || []);
+        setDaterange(selectedResume.filters.daterange || '');
+      } else {
+        setLocation('');
+        setSelectedWorkTypes([]);
+        setDaterange('');
+      }
+
       const updatedProfile = {
         ...profile,
         settings: {

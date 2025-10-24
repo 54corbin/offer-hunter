@@ -25,6 +25,12 @@ export interface Education {
   graduationDate: string;
 }
 
+export interface JobSearchFilters {
+  location: string;
+  workType: string[];
+  daterange: string;
+}
+
 export interface Resume {
   id: string;
   name: string;
@@ -36,6 +42,7 @@ export interface Resume {
     education?: Education[];
     skills?: string[];
   };
+  filters?: JobSearchFilters;
 }
 
 export interface ApiProvider {
