@@ -16,6 +16,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 let isCancelled = false;
 
 async function createPdf(text: string): Promise<Uint8Array> {
+  console.log("createPdf called");
   const pdfDoc = await PDFDocument.create();
   let page = pdfDoc.addPage();
   const { width, height } = page.getSize();
@@ -56,20 +57,24 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.action.onClicked.addListener((tab) => {
+  console.log("chrome.action.onClicked triggered");
   chrome.tabs.create({
     url: "index.html#/",
   });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("chrome.runtime.onMessage received", message);
   if (
     message.type === "TRIGGER_AUTOFILL" &&
     message.tabId &&
     message.resumeId
   ) {
+    console.log("TRIGGER_AUTOFILL message received");
     triggerAutofill(message.tabId, message.resumeId);
     sendResponse({ status: "ok" });
   } else if (message.type === "GENERATE_ANSWER") {
+    console.log("GENERATE_ANSWER message received");
     handleGenerateAnswer(
       message.questionText,
       message.jobDescription,
@@ -79,23 +84,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => sendResponse({ error: error.message }));
     return true;
   } else if (message.type === "FETCH_JOBS_FROM_SEEK") {
+    console.log("FETCH_JOBS_FROM_SEEK message received");
     isCancelled = false;
     fetchAndScrapeJobs(message.resumeId, message.filters);
     sendResponse({ status: "ok" });
   } else if (message.type === "SCRAPED_JOB_DATA") {
+    console.log("SCRAPED_JOB_DATA message received");
     handleScrapedJobs(message.data, message.resumeId);
     sendResponse({ status: "ok" });
   } else if (message.type === "CANCEL_JOB_FETCH") {
+    console.log("CANCEL_JOB_FETCH message received");
     isCancelled = true;
     chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
     sendResponse({ status: "cancelled" });
   } else if (message.type === "GENERATE_RESUME_FOR_JOB") {
+    console.log("GENERATE_RESUME_FOR_JOB message received");
     handleGenerateResumeForJob(message.job, message.resumeId);
     sendResponse({ status: "ok" });
   } else if (message.type === "DOWNLOAD_RESUME") {
+    console.log("DOWNLOAD_RESUME message received");
     handleDownloadResume(message.resumeText, message.jobTitle);
     sendResponse({ status: "ok" });
   } else if (message.type === "GENERATE_COVER_LETTER_FOR_JOB") {
+    console.log("GENERATE_COVER_LETTER_FOR_JOB message received");
     handleGenerateCoverLetterForJob(message.job, message.resumeId);
     sendResponse({ status: "ok" });
   }
@@ -107,6 +118,11 @@ async function handleGenerateAnswer(
   jobDescription: string,
   tabId: number | undefined,
 ) {
+  console.log("handleGenerateAnswer called with:", {
+    questionText,
+    jobDescription,
+    tabId,
+  });
   if (!tabId) throw new Error("Tab ID not provided.");
 
   const profile = await getUserProfile();
@@ -134,12 +150,14 @@ async function handleGenerateAnswer(
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  console.log("chrome.contextMenus.onClicked triggered", info);
   if (info.menuItemId === "offer-hunter-autofill" && tab?.id) {
     await triggerAutofill(tab.id);
   }
 });
 
 async function triggerAutofill(tabId: number, resumeId?: string) {
+  console.log("triggerAutofill called with:", { tabId, resumeId });
   const profile = await getUserProfile();
   // If a specific resumeId is provided, find that resume.
   // Otherwise, fall back to the first resume in the list.
@@ -179,12 +197,21 @@ function buildSeekUrl(
   daterange?: number,
   page?: number,
 ): string {
+  console.log("buildSeekUrl called with:", {
+    keywords,
+    location,
+    worktypes,
+    daterange,
+    page,
+  });
   const baseUrl = "https://www.seek.com.au";
 
   const keywordSlug = slugify(keywords.join(" "));
   let path = `/${keywordSlug}-jobs`;
 
-  path += `/in-${location}`;
+  if (location) {
+    path += `/in-${location}`;
+  }
 
   const queryParams = new URLSearchParams();
   if (worktypes && worktypes.length > 0) {
@@ -206,8 +233,10 @@ function buildSeekUrl(
 }
 
 async function fetchAndScrapeJobs(resumeId: string, filters: any) {
+  console.log("fetchAndScrapeJobs called with:", { resumeId, filters });
   const profile = await getUserProfile();
   const resume = profile?.resumes?.find((r) => r.id === resumeId);
+  console.log("active resume: ", { resume });
 
   if (!resume) {
     console.error("Could not find the specified resume to start job search.");
@@ -222,16 +251,9 @@ async function fetchAndScrapeJobs(resumeId: string, filters: any) {
     return;
   }
 
-  const { location, workType, daterange, page } =
-    filters;
+  const { location, workType, daterange, page } = filters;
 
-  const seekUrl = buildSeekUrl(
-    keywords,
-    location,
-    workType,
-    daterange,
-    page,
-  );
+  const seekUrl = buildSeekUrl(keywords, location, workType, daterange, page);
   console.info("SeekUrl: " + seekUrl);
 
   chrome.tabs.create({ url: seekUrl, active: false }, (tab) => {
@@ -258,6 +280,7 @@ async function fetchAndScrapeJobs(resumeId: string, filters: any) {
 }
 
 async function handleScrapedJobs(jobs: any[], resumeId: string) {
+  console.log("handleScrapedJobs called with:", { jobs, resumeId });
   const profile = await getUserProfile();
   const resume = profile?.resumes?.find((r) => r.id === resumeId);
 
@@ -296,6 +319,7 @@ async function handleScrapedJobs(jobs: any[], resumeId: string) {
 }
 
 async function handleGenerateResumeForJob(job: any, resumeId: string) {
+  console.log("handleGenerateResumeForJob called with:", { job, resumeId });
   const profile = await getUserProfile();
   if (!profile) {
     console.error("Could not find user profile.");
@@ -338,6 +362,7 @@ async function handleGenerateResumeForJob(job: any, resumeId: string) {
 }
 
 function Uint8ArrayToBase64(array: Uint8Array) {
+  console.log("Uint8ArrayToBase64 called");
   let binary = "";
   for (let i = 0; i < array.byteLength; i++) {
     binary += String.fromCharCode(array[i]);
@@ -346,6 +371,7 @@ function Uint8ArrayToBase64(array: Uint8Array) {
 }
 
 async function handleDownloadResume(resumeText: string, jobTitle: string) {
+  console.log("handleDownloadResume called with:", { jobTitle });
   const pdfBytes = await createPdf(resumeText);
   const base64Data = Uint8ArrayToBase64(pdfBytes);
   const dataUrl = `data:application/pdf;base64,${base64Data}`;
@@ -359,6 +385,10 @@ async function handleDownloadResume(resumeText: string, jobTitle: string) {
 }
 
 async function handleGenerateCoverLetterForJob(job: any, resumeId: string) {
+  console.log("handleGenerateCoverLetterForJob called with:", {
+    job,
+    resumeId,
+  });
   const profile = await getUserProfile();
   if (!profile) {
     console.error("Could not find user profile.");

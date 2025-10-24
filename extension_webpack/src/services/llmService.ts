@@ -268,8 +268,8 @@ export const extractKeywordsFromResume = async (
   resumeText: string,
 ): Promise<string[]> => {
   const prompt = `
-    Based on the following resume text, extract 3 most relevant keywords for a job search.
-    Return a JSON array of 5-10 strings.
+    Based on the following resume text, extract 2 most relevant keywords for a job search.
+    Return a JSON array.
 
     Resume Text:
     ---
