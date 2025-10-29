@@ -368,7 +368,7 @@ const JobsPage: React.FC = () => {
                     <div className="space-y-2 mt-4 text-sm text-gray-500">
                       {job.location && ( <div className="flex items-center"> <FiMapPin className="mr-2 flex-shrink-0" /> <span>{job.location}</span> </div> )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-4 h-16 overflow-hidden text-ellipsis">{job.summary || 'No summary available.'}</p>
+                    <p className="text-sm text-gray-600 mt-4 h-16 overflow-hidden text-ellipsis">{job.description || 'No description available.'}</p>
                   </div>
                   <div className="bg-gray-50 p-4 flex justify-between items-center">
                     <div className="flex flex-col items-center">

@@ -47,7 +47,7 @@ export interface Resume {
 
 export interface ApiProvider {
   id: string;
-  name: 'OpenAI' | 'Gemini';
+  name: 'OpenAI' | 'Gemini' | 'Ollama';
   apiKey: string;
   model: string;
 }

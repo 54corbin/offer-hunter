@@ -21,6 +21,15 @@ const getLlmApiCallConfig = async () => {
     return null;
   }
 
+  if (provider.name === "Ollama") {
+    return {
+      url: `${provider.apiKey}/api/generate`, // apiKey is the host for Ollama
+      headers: { "Content-Type": "application/json" },
+      provider: "ollama",
+      model: provider.model,
+    };
+  }
+
   if (provider.name === "Gemini") {
     return {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`,
@@ -42,19 +51,35 @@ const getLlmApiCallConfig = async () => {
 };
 
 export const generateContent = async (
-  prompt: string,
+  prompt:string,
+  temperature: number = 0.7,
 ): Promise<string | null> => {
   const config = await getLlmApiCallConfig();
   if (!config) return null;
 
-  const body =
-    config.provider === "gemini"
-      ? { contents: [{ parts: [{ text: prompt }] }] }
-      : {
-          model: config.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-        };
+  let body;
+  if (config.provider === 'gemini') {
+    body = { 
+      contents: [{ parts: [{ text: prompt }] }],
+      // Gemini temperature is part of generationConfig, but for simplicity we'll omit for now
+      // as it requires a different structure. The default should be fine.
+    };
+  } else if (config.provider === 'ollama') {
+    body = {
+      model: config.model,
+      prompt: prompt,
+      stream: false,
+      options: {
+        temperature,
+      }
+    };
+  } else { // openai
+    body = {
+      model: config.model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature,
+    };
+  }
 
   try {
     const response = await fetch(config.url, {
@@ -64,14 +89,18 @@ export const generateContent = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("LLM API request failed:", errorData);
+      // It's better to get response text as it might not be json
+      const errorText = await response.text();
+      console.error("LLM API request failed:", response.status, errorText);
       return null;
     }
 
     const data = await response.json();
     if (config.provider === "gemini") {
       return data.candidates[0]?.content.parts[0].text || null;
+    }
+    if (config.provider === "ollama") {
+      return data.response || null;
     }
     return data.choices[0]?.message?.content || null;
   } catch (error) {
@@ -84,9 +113,6 @@ export const getMatchScore = async (
   jobDetails: any,
   resumeText: string,
 ): Promise<{ score: number; summary: string } | null> => {
-  const config = await getLlmApiCallConfig();
-  if (!config) return null;
-
   const truncatedResumeText = resumeText.substring(0, 4000);
   const prompt = `
     You are a professional recruiter. Analyze the following resume and job description, and return a relevance score from 1 to 100, where 100 is a perfect match. Also, provide a brief summary of why it is a match or not. Your response must be a JSON object with the keys "score" and "summary".
@@ -102,65 +128,32 @@ export const getMatchScore = async (
     ---
   `;
 
-  const body =
-    config.provider === "gemini"
-      ? { contents: [{ parts: [{ text: prompt }] }] }
-      : {
-          model: config.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.2,
-        };
+  const content = await generateContent(prompt, 0.2);
 
-  try {
-    const response = await fetch(config.url, {
-      method: "POST",
-      headers: config.headers as Headers,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("LLM API request failed:", errorData);
-      return null;
-    }
-
-    const data = await response.json();
-    const content =
-      config.provider === "gemini"
-        ? data.candidates[0]?.content.parts[0].text
-        : data.choices[0]?.message?.content;
-
-    if (content) {
-      try {
-        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-        let jsonString = jsonMatch ? jsonMatch[1] : content;
-        jsonString = jsonString.replace(/,\s*([}\]])/g, "$1");
-        return JSON.parse(jsonString);
-      } catch (e) {
-        console.error(
-          "Failed to parse LLM response JSON:",
-          e,
-          "Raw content:",
-          content,
-        );
-        return { score: 0, summary: "Could not analyze relevance." };
-      }
-    } else {
-      console.error("LLM response did not contain content.");
+  if (content) {
+    try {
+      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+      let jsonString = jsonMatch ? jsonMatch[1] : content;
+      jsonString = jsonString.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(jsonString);
+    } catch (e) {
+      console.error(
+        "Failed to parse LLM response JSON:",
+        e,
+        "Raw content:",
+        content,
+      );
       return { score: 0, summary: "Could not analyze relevance." };
     }
-  } catch (error) {
-    console.error("Error calling LLM API:", error);
-    return null;
+  } else {
+    console.error("LLM response did not contain content.");
+    return { score: 0, summary: "Could not analyze relevance." };
   }
 };
 
 export const extractProfileFromResume = async (
   resumeText: string,
 ): Promise<Partial<UserProfile> | null> => {
-  const config = await getLlmApiCallConfig();
-  if (!config) return null;
-
   const sanitizedResumeText = resumeText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
 
   const prompt = `
@@ -183,50 +176,20 @@ export const extractProfileFromResume = async (
     ---
   `;
 
-  const body =
-    config.provider === "gemini"
-      ? { contents: [{ parts: [{ text: prompt }] }] }
-      : {
-          model: config.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.2,
-        };
+  const content = await generateContent(prompt, 0.2);
 
-  try {
-    const response = await fetch(config.url, {
-      method: "POST",
-      headers: config.headers as Headers,
-      body: JSON.stringify(body),
-    });
+  if (content) {
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+    const jsonString = jsonMatch ? jsonMatch[1] : content;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("LLM API request failed:", errorData);
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      console.error("Failed to parse LLM response JSON:", e);
       return null;
     }
-
-    const data = await response.json();
-    const content =
-      config.provider === "gemini"
-        ? data.candidates[0]?.content.parts[0].text
-        : data.choices[0]?.message?.content;
-
-    if (content) {
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : content;
-
-      try {
-        return JSON.parse(jsonString);
-      } catch (e) {
-        console.error("Failed to parse LLM response JSON:", e);
-        return null;
-      }
-    } else {
-      console.error("LLM response did not contain content.");
-      return null;
-    }
-  } catch (error) {
-    console.error("Error calling LLM API:", error);
+  } else {
+    console.error("LLM response did not contain content.");
     return null;
   }
 };
@@ -246,6 +209,16 @@ export const listModels = async (
         .filter((m: string) => m.includes("gemini"));
     } catch (error) {
       console.error("Error fetching Gemini models:", error);
+      return null;
+    }
+  } else if (provider.name === "Ollama") {
+    try {
+      const response = await fetch(`${provider.apiKey}/api/tags`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.models.map((m: any) => m.name);
+    } catch (error) {
+      console.error("Error fetching Ollama models:", error);
       return null;
     }
   } else {
