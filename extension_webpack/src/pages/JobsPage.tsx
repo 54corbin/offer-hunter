@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FiSearch, FiExternalLink, FiMapPin, FiFileText, FiLoader, FiMail } from 'react-icons/fi';
+import { FiSearch, FiExternalLink, FiMapPin, FiFileText, FiLoader, FiMail, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { getUserProfile, UserProfile, Resume, getJobsForResume, saveUserProfile } from '../services/storageService';
 import { fetchLocationSuggestions, LocationSuggestion } from '../services/seekService';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -23,6 +23,8 @@ const JobsPage: React.FC = () => {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([]);
   const [daterange, setDaterange] = useState('');
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
 
   const workTypesMap: { [key: string]: string } = {
     "Full-time": "242",
@@ -44,6 +46,48 @@ const JobsPage: React.FC = () => {
         ? prev.filter(code => code !== workTypeCode)
         : [...prev, workTypeCode]
     );
+  };
+
+  const handleKeywordToggle = (keyword: string) => {
+    setSelectedKeywords(prev =>
+      prev.includes(keyword)
+        ? prev.filter(k => k !== keyword)
+        : [...prev, keyword]
+    );
+  };
+
+  const handleAddKeyword = async () => {
+    if (newKeyword && selectedResumeId && profile?.resumes) {
+      const updatedResumes = profile.resumes.map(r => {
+        if (r.id === selectedResumeId) {
+          const updatedKeywords = [...(r.filters?.keywords || []), newKeyword];
+          // Also add to selected keywords for immediate feedback
+          setSelectedKeywords(prev => [...prev, newKeyword]);
+          return { ...r, filters: { ...(r.filters || { location: '', workType: [], daterange: '' }), keywords: updatedKeywords } };
+        }
+        return r;
+      });
+      const updatedProfile = { ...profile, resumes: updatedResumes };
+      setProfile(updatedProfile);
+      await saveUserProfile(updatedProfile);
+      setNewKeyword('');
+    }
+  };
+
+  const handleRemoveKeyword = async (keywordToRemove: string) => {
+    if (selectedResumeId && profile?.resumes) {
+      const updatedResumes = profile.resumes.map(r => {
+        if (r.id === selectedResumeId) {
+          const updatedKeywords = (r.filters?.keywords || []).filter(k => k !== keywordToRemove);
+          return { ...r, filters: { ...(r.filters || { location: '', workType: [], daterange: '' }), keywords: updatedKeywords } };
+        }
+        return r;
+      });
+      const updatedProfile = { ...profile, resumes: updatedResumes };
+      setProfile(updatedProfile);
+      await saveUserProfile(updatedProfile);
+      setSelectedKeywords(prev => prev.filter(k => k !== keywordToRemove));
+    }
   };
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -68,6 +112,7 @@ const JobsPage: React.FC = () => {
           setLocation(initialResume.filters.location || '');
           setSelectedWorkTypes(initialResume.filters.workType || []);
           setDaterange(initialResume.filters.daterange || '');
+          setSelectedKeywords(initialResume.filters.keywords || []);
         }
       }
       setIsProfileLoading(false);
@@ -138,11 +183,13 @@ const JobsPage: React.FC = () => {
       setIsLoading(true);
       setProgress(0);
 
-      const updatedResumes = profile.resumes?.map(r => 
-        r.id === selectedResumeId 
-          ? { ...r, filters: { location, workType: selectedWorkTypes, daterange } } 
-          : r
-      );
+      const updatedResumes = profile.resumes?.map(r => {
+        if (r.id === selectedResumeId) {
+          const currentKeywords = r.filters?.keywords || [];
+          return { ...r, filters: { keywords: currentKeywords, location, workType: selectedWorkTypes, daterange } };
+        }
+        return r;
+      });
 
       if (updatedResumes) {
         const updatedProfile = { ...profile, resumes: updatedResumes };
@@ -154,6 +201,7 @@ const JobsPage: React.FC = () => {
         type: "FETCH_JOBS_FROM_SEEK",
         resumeId: selectedResumeId,
         filters: {
+          keywords: selectedKeywords,
           location,
           workType: selectedWorkTypes,
           daterange: daterange ? Number(daterange) : undefined,
@@ -221,10 +269,12 @@ const JobsPage: React.FC = () => {
         setLocation(selectedResume.filters.location || '');
         setSelectedWorkTypes(selectedResume.filters.workType || []);
         setDaterange(selectedResume.filters.daterange || '');
+        setSelectedKeywords(selectedResume.filters.keywords || []);
       } else {
         setLocation('');
         setSelectedWorkTypes([]);
         setDaterange('');
+        setSelectedKeywords([]);
       }
 
       const updatedProfile = {
@@ -319,6 +369,48 @@ const JobsPage: React.FC = () => {
                       {name}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4 mt-4">
+                <p className="font-medium text-slate-600 mb-2">Keywords:</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {profile?.resumes?.find(r => r.id === selectedResumeId)?.filters?.keywords?.map(keyword => (
+                    <div key={keyword} className="flex items-center rounded-full bg-slate-100">
+                      <button
+                        onClick={() => handleKeywordToggle(keyword)}
+                        className={`px-4 py-1.5 rounded-l-full text-sm font-semibold transition-colors duration-200 ${
+                          selectedKeywords.includes(keyword)
+                            ? 'bg-blue-500 text-white'
+                            : 'hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {keyword}
+                      </button>
+                      <button
+                        onClick={() => handleRemoveKeyword(keyword)}
+                        className="hover:bg-red-100 text-slate-600 hover:text-red-500 px-2 py-1.5 rounded-r-full transition-colors"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  <input
+                    type="text"
+                    placeholder="Add new keyword"
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+                    className="w-full sm:w-auto rounded-lg border-slate-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition"
+                  />
+                  <button
+                    onClick={handleAddKeyword}
+                    className="flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+                  >
+                    <FiPlus className="mr-1" /> Add
+                  </button>
                 </div>
               </div>
 

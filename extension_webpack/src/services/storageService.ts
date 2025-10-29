@@ -29,6 +29,7 @@ export interface JobSearchFilters {
   location: string;
   workType: string[];
   daterange: string;
+  keywords?: string[];
 }
 
 export interface Resume {

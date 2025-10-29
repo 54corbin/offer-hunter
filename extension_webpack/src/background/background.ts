@@ -244,9 +244,26 @@ async function fetchAndScrapeJobs(resumeId: string, filters: any) {
     return;
   }
 
-  const keywords = await extractKeywordsFromResume(resume.text);
-  if (!keywords) {
-    console.error("Could not extract keywords from resume.");
+  let keywords = resume.filters?.keywords;
+  if (!keywords || keywords.length === 0) {
+    console.log("Keywords not found in resume filters, extracting them now.");
+    keywords = await extractKeywordsFromResume(resume.text);
+    if (keywords && profile) {
+      // Save keywords for future use
+      const updatedResumes = profile.resumes?.map(r => {
+        if (r.id === resumeId) {
+          const existingFilters = r.filters || { location: '', workType: [], daterange: '' };
+          return { ...r, filters: { ...existingFilters, keywords: keywords } };
+        }
+        return r;
+      });
+      const updatedProfile = { ...profile, resumes: updatedResumes };
+      await saveUserProfile(updatedProfile);
+    }
+  }
+
+  if (!keywords || keywords.length === 0) {
+    console.error("Could not extract or find keywords from resume.");
     chrome.runtime.sendMessage({ type: "JOB_MATCHING_COMPLETE" });
     return;
   }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SimpleLoadingOverlay from './SimpleLoadingOverlay';
 import { UserProfile, Resume, saveUserProfile } from '../services/storageService';
-import { extractProfileFromResume } from '../services/llmService';
+import { extractProfileFromResume, extractKeywordsFromResume } from '../services/llmService';
 import { FiUpload, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -73,7 +73,10 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
   };
 
   const processResume = async (file: File, fileData: string, text: string) => {
-    const extractedProfile = await extractProfileFromResume(text);
+    const [extractedProfile, keywords] = await Promise.all([
+      extractProfileFromResume(text),
+      extractKeywordsFromResume(text),
+    ]);
 
     const newResume: Resume = {
       id: new Date().toISOString(),
@@ -81,6 +84,12 @@ const ResumeManager: React.FC<ResumeManagerProps> = ({ profile, onProfileUpdate 
       data: fileData,
       text: text,
       parsedInfo: extractedProfile || undefined,
+      filters: {
+        location: '',
+        workType: [],
+        daterange: '',
+        keywords: keywords,
+      }
     };
     
     let updatedProfile = { ...profile };
