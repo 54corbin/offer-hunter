@@ -2,16 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { FiSearch, FiExternalLink, FiMapPin, FiFileText, FiLoader, FiMail, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { getUserProfile, UserProfile, Resume, getJobsForResume, saveUserProfile } from '../services/storageService';
 import { fetchLocationSuggestions, LocationSuggestion } from '../services/seekService';
-import LoadingOverlay from '../components/LoadingOverlay';
+
 import ResumeReviewModal from '../components/ResumeReviewModal';
 import CoverLetterReviewModal from '../components/CoverLetterReviewModal';
+import ProgressButton from '../components/ProgressButton';
 
 const JobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchingProgress, setMatchingProgress] = useState(0);
   const [generatingResumeId, setGeneratingResumeId] = useState<string | null>(null);
   const [generatingCoverLetterId, setGeneratingCoverLetterId] = useState<string | null>(null);
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
@@ -120,14 +121,13 @@ const JobsPage: React.FC = () => {
 
     const messageListener = (message: any) => {
       if (message.type === "JOB_MATCHING_PROGRESS") {
-        setIsLoading(true);
-        setProgress(message.progress);
+        setIsMatching(true);
+        setMatchingProgress(message.progress);
+      } else if (message.type === "NEW_JOB_SCORED") {
+        setJobs(prevJobs => [...prevJobs, message.job].sort((a, b) => b.score - a.score));
       } else if (message.type === "JOB_MATCHING_COMPLETE") {
-        setIsLoading(false);
-        setProgress(0);
-        if (selectedResumeId) {
-          fetchJobsForTab(selectedResumeId);
-        }
+        setIsMatching(false);
+        setMatchingProgress(0);
       } else if (message.type === "RESUME_GENERATION_COMPLETE") {
         setGeneratingResumeId(null);
       } else if (message.type === "RESUME_GENERATION_SUCCESS") {
@@ -143,12 +143,9 @@ const JobsPage: React.FC = () => {
         setGeneratingCoverLetterId(null);
         setGeneratedCoverLetterText(message.coverLetter);
         setCoverLetterReviewModalOpen(true);
-        // Maybe show a toast notification here
       } else if (message.type === "COVER_LETTER_GENERATION_FAILURE") {
         setGeneratingCoverLetterId(null);
-        // Maybe show a toast notification here
       }
-
     };
     chrome.runtime.onMessage.addListener(messageListener);
     return () => chrome.runtime.onMessage.removeListener(messageListener);
@@ -180,8 +177,9 @@ const JobsPage: React.FC = () => {
 
   const handleDiscoverJobs = async () => {
     if (selectedResumeId && profile) {
-      setIsLoading(true);
-      setProgress(0);
+      setJobs([]); // Clear existing jobs
+      setIsMatching(true);
+      setMatchingProgress(0);
 
       const updatedResumes = profile.resumes?.map(r => {
         if (r.id === selectedResumeId) {
@@ -211,7 +209,7 @@ const JobsPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    setIsLoading(false);
+    setIsMatching(false);
     chrome.runtime.sendMessage({ type: "CANCEL_JOB_FETCH" });
   };
 
@@ -297,7 +295,7 @@ const JobsPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {isLoading && <LoadingOverlay progress={progress} onCancel={handleCancel} />}
+      
       <ResumeReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
@@ -432,14 +430,18 @@ const JobsPage: React.FC = () => {
                       </button>
                     ))}
                   </nav>
-                  <button
-                    onClick={handleDiscoverJobs}
-                    className="flex items-center justify-center w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selectedResumeId}
-                  >
-                    <FiSearch className="mr-2" />
-                    Find Matching Jobs
-                  </button>
+                  {isMatching ? (
+                    <ProgressButton progress={matchingProgress} onClick={handleCancel} />
+                  ) : (
+                    <button
+                      onClick={handleDiscoverJobs}
+                      className="flex items-center justify-center w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!selectedResumeId}
+                    >
+                      <FiSearch className="mr-2" />
+                      Find Matching Jobs
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -501,7 +503,7 @@ const JobsPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            !isProfileLoading && (
+            !isProfileLoading && !isMatching && (
               <div className="text-center p-12 bg-white/80 rounded-3xl shadow-xl backdrop-blur-lg">
                 <h3 className="text-3xl font-semibold text-slate-700">No recommended jobs for this resume.</h3>
                 <p className="mt-2 text-slate-500">Click "Refresh Jobs" to start a search.</p>

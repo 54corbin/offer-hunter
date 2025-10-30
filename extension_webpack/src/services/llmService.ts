@@ -51,32 +51,33 @@ const getLlmApiCallConfig = async () => {
 };
 
 export const generateContent = async (
-  prompt:string,
+  prompt: string,
   temperature: number = 0.7,
 ): Promise<string | null> => {
   const config = await getLlmApiCallConfig();
   if (!config) return null;
 
   let body;
-  if (config.provider === 'gemini') {
-    body = { 
+  if (config.provider === "gemini") {
+    body = {
       contents: [{ parts: [{ text: prompt }] }],
       // Gemini temperature is part of generationConfig, but for simplicity we'll omit for now
       // as it requires a different structure. The default should be fine.
     };
-  } else if (config.provider === 'ollama') {
+  } else if (config.provider === "ollama") {
     body = {
       model: config.model,
       prompt: prompt,
       stream: false,
       options: {
         temperature,
-      }
+      },
     };
-  } else { // openai
+  } else {
+    // openai
     body = {
       model: config.model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
       temperature,
     };
   }
@@ -241,7 +242,7 @@ export const extractKeywordsFromResume = async (
   resumeText: string,
 ): Promise<string[]> => {
   const prompt = `
-    Based on the following resume text, extract 2 most relevant keywords for a job search.
+    Based on the following resume text, extract 2 most relevant one-word keywords for job listings searching.
     Return a JSON array.
 
     Resume Text:

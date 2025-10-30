@@ -317,7 +317,9 @@ async function handleScrapedJobs(jobs: any[], resumeId: string) {
     const job = jobs[i];
     const result = await getMatchScore(job, resumeSummaryText);
     if (result) {
-      scoredJobs.push({ ...job, score: result.score, summary: result.summary });
+      const scoredJob = { ...job, score: result.score, summary: result.summary };
+      scoredJobs.push(scoredJob);
+      chrome.runtime.sendMessage({ type: "NEW_JOB_SCORED", job: scoredJob });
     }
     const progress = ((i + 1) / jobs.length) * 100;
     chrome.runtime.sendMessage({ type: "JOB_MATCHING_PROGRESS", progress });
