@@ -434,3 +434,17 @@ These commands make AI calls and may take up to a minute:
 ---
 
 _This guide ensures Claude Code has immediate access to Task Master's essential functionality for agentic development workflows._
+
+To Whom It May Concern,
+
+I am writing to provide my support for Mr. Hongbing Chen’s application for admission to the Doctor of Philosophy (PhD) program at the University of Adelaide. I have discussed with Mr. Chen his proposed research in the project “AI Digital Twin for Anatomical Pathology Workflow Optimisation”, and I am pleased to confirm my willingness to act as his principal supervisor should his application be successful.
+
+Mr. Chen has demonstrated exceptional technical and analytical skills, with over six years of professional experience in software engineering and backend system development. His background includes significant work in AI-driven workflow automation, large-scale distributed systems, and data integration — all of which align closely with the requirements of this research project.
+
+Throughout our discussions, I have been particularly impressed by Mr. Chen’s self-motivation and capacity for independent learning. His ability to self-teach advanced technologies such as Rust, blockchain systems, and AI-driven automation tools shows the intellectual curiosity and discipline that are essential for PhD-level research. Furthermore, his experience in developing intelligent workflow systems demonstrates both innovation and practical problem-solving ability.
+
+We have conducted an interview (in English) where we discussed his academic preparation, research interests, and technical experience. Based on this, I am confident that Mr. Chen has the aptitude, maturity, and dedication to successfully complete a PhD in this area.
+
+I fully support his application and believe he will make a valuable contribution to our ongoing research in digital transformation and AI-enabled healthcare systems.
+
+Yours sincerely,
