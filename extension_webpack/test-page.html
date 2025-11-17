@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Answer Generation Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-text {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 3px;
+            cursor: text;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; }
+        .instructions {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Answer Generation Feature Test Page</h1>
+    
+    <div class="instructions">
+        <h2>Testing Instructions:</h2>
+        <ol>
+            <li>Open Developer Console (F12) to see debug logs</li>
+            <li>Select any text below (minimum 10 characters)</li>
+            <li>Look for a small popup icon near your selection</li>
+            <li>Hover over the icon to open the answer generation menu</li>
+            <li>Check console for detailed logs</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Sample Job Description Text:</h2>
+        <div class="test-text">
+            We are seeking a Senior Software Engineer to join our dynamic development team. 
+            The ideal candidate will have 5+ years of experience in full-stack development, 
+            proficiency in React and Node.js, and a strong understanding of cloud platforms 
+            such as AWS or Azure. You will be responsible for designing and implementing 
+            scalable web applications, mentoring junior developers, and collaborating with 
+            cross-functional teams to deliver high-quality software solutions.
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Technical Question Example:</h2>
+        <div class="test-text">
+            Explain the differences between synchronous and asynchronous programming in JavaScript. 
+            Provide examples of when you would use each approach and discuss the impact on 
+            application performance and user experience.
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>General Content:</h2>
+        <div class="test-text">
+            The quick brown fox jumps over the lazy dog. This sentence contains every letter 
+            of the alphabet and is commonly used for testing purposes. However, for our answer 
+            generation feature testing, we need longer text selections to properly trigger 
+            the popup interface that helps users generate contextual responses based on their 
+            selected text and professional background.
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive logging
+        console.log("Test page loaded successfully");
+        console.log("Current URL:", window.location.href);
+        console.log("User Agent:", navigator.userAgent);
+        
+        // Add click handler to show page is interactive
+        document.addEventListener('click', function(e) {
+            console.log("Page click detected at:", e.clientX, e.clientY);
+        });
+    </script>
+</body>
+</html>
