@@ -13,6 +13,7 @@ module.exports = (env, argv) => {
       seek: './src/content-scripts/seek.ts',
       linkedin: './src/content-scripts/linkedin.ts',
       autofill: './src/content-scripts/autofill.ts',
+      answerGeneration: './src/content-scripts/answerGeneration.ts',
       
       popup: './src/popup.ts',
     },

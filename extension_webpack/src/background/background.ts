@@ -109,6 +109,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("GENERATE_COVER_LETTER_FOR_JOB message received");
     handleGenerateCoverLetterForJob(message.job, message.resumeId);
     sendResponse({ status: "ok" });
+  } else if (message.type === "OPEN_ANSWER_GENERATION_MENU") {
+    console.log("Background: OPEN_ANSWER_GENERATION_MENU message received");
+    handleOpenAnswerGenerationMenu(message.data, sender.tab?.id);
+    sendResponse({ status: "ok" });
   }
   return true;
 });
@@ -435,5 +439,49 @@ async function handleGenerateCoverLetterForJob(job: any, resumeId: string) {
     });
   } else {
     chrome.runtime.sendMessage({ type: "COVER_LETTER_GENERATION_FAILURE" });
+  }
+}
+
+async function handleOpenAnswerGenerationMenu(data: {
+  selectedText: string;
+  position: { x: number; y: number };
+}, tabId?: number) {
+  console.log("Background: handleOpenAnswerGenerationMenu called");
+  console.log("Background: Data received:", data);
+  console.log("Background: Tab ID:", tabId);
+  
+  if (!tabId) {
+    console.error("Background: Tab ID not provided for answer generation menu");
+    return;
+  }
+
+  try {
+    // Open the extension popup window with the answer generation interface
+    console.log("Background: Creating popup window...");
+    const popupWindow = await chrome.windows.create({
+      url: chrome.runtime.getURL('popup.html#/answer-generation'),
+      type: 'popup',
+      width: 420,
+      height: 600,
+      left: Math.round(data.position.x),
+      top: Math.round(data.position.y)
+    });
+    
+    console.log("Background: Popup window created:", popupWindow);
+
+    // Store the data temporarily to be retrieved by the popup
+    if (popupWindow?.id) {
+      console.log("Background: Storing data in session storage...");
+      await chrome.storage.session.set({
+        [`answer_generation_${popupWindow.id}`]: {
+          selectedText: data.selectedText,
+          position: data.position,
+          tabId: tabId
+        }
+      });
+      console.log("Background: Data stored successfully");
+    }
+  } catch (error) {
+    console.error('Background: Error creating answer generation popup:', error);
   }
 }

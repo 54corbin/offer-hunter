@@ -315,131 +315,162 @@ const JobsPage: React.FC = () => {
       ) : (
         <>
           {profile && profile.resumes && profile.resumes.length > 0 ? (
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200/80">
-              <div className="flex flex-wrap items-center gap-4 mb-6">
-                <div className="relative flex-grow" style={{ flexBasis: '300px' }}>
-                  <FiMapPin className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Location (e.g. Melbourne, VIC)"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full rounded-lg border-slate-300 pl-10 pr-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
-                  />
-                  {locationSuggestions.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
-                      {locationSuggestions.map((suggestion, index) => (
-                        <li
-                          key={index}
-                          className="p-3 hover:bg-blue-50 cursor-pointer text-slate-700"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                        >
-                          {suggestion.text}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="flex-shrink-0">
-                  <select
-                    value={daterange}
-                    onChange={(e) => setDaterange(e.target.value)}
-                    className="rounded-lg border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:ring-blue-500 transition"
-                  >
-                    <option value="">Any time</option>
-                    {Object.entries(dateRanges).map(([name, value]) => (
-                      <option key={value} value={value}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-slate-600 mr-2 shrink-0">Work types:</p>
-                  {Object.entries(workTypesMap).map(([name, code]) => (
-                    <button
-                      key={code}
-                      onClick={() => handleWorkTypeChange(code)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 transform hover:scale-105 ${
-                        selectedWorkTypes.includes(code)
-                          ? 'bg-blue-500 text-white shadow-md'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden">
+              {/* Compact Filter Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-4 border-b border-slate-200">
+                <h2 className="text-xl font-bold text-slate-800">Job Search Filters</h2>
+                <p className="text-sm text-slate-600 mt-1">Customize your job search preferences</p>
               </div>
 
-              <div className="border-t border-slate-200 pt-4 mt-4">
-                <p className="font-medium text-slate-600 mb-2">Keywords:</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {profile?.resumes?.find(r => r.id === selectedResumeId)?.filters?.keywords?.map(keyword => (
-                    <div key={keyword} className="flex items-center rounded-full bg-slate-100">
+              {/* Main Filter Content */}
+              <div className="p-6">
+                {/* Primary Filters Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  {/* Location Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      <FiMapPin className="inline mr-1" size={16} />
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Melbourne, VIC"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full rounded-lg border-slate-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    />
+                    {locationSuggestions.length > 0 && (
+                      <ul className="absolute z-20 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                        {locationSuggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            className="p-2 hover:bg-blue-50 cursor-pointer text-sm text-slate-700"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                          >
+                            {suggestion.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Date Range Filter */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Date Posted
+                    </label>
+                    <select
+                      value={daterange}
+                      onChange={(e) => setDaterange(e.target.value)}
+                      className="w-full rounded-lg border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    >
+                      <option value="">Any time</option>
+                      {Object.entries(dateRanges).map(([name, value]) => (
+                        <option key={value} value={value}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Work Types Filter */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Work Type
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(workTypesMap).map(([name, code]) => (
+                        <button
+                          key={code}
+                          onClick={() => handleWorkTypeChange(code)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 ${
+                            selectedWorkTypes.includes(code)
+                              ? 'bg-blue-500 text-white shadow-md shadow-blue-500/25'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Keywords Section */}
+                <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-slate-700">
+                      Keywords ({selectedKeywords.length})
+                    </label>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <input
+                        type="text"
+                        placeholder="Add keyword"
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+                        className="w-32 rounded-md border-slate-300 px-2 py-1 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                      />
                       <button
-                        onClick={() => handleKeywordToggle(keyword)}
-                        className={`px-4 py-1.5 rounded-l-full text-sm font-semibold transition-colors duration-200 ${
-                          selectedKeywords.includes(keyword)
-                            ? 'bg-blue-500 text-white'
-                            : 'hover:bg-slate-200 text-slate-700'
-                        }`}
+                        onClick={handleAddKeyword}
+                        className="flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded-md p-1 shadow-sm hover:shadow-md transition-all"
                       >
-                        {keyword}
-                      </button>
-                      <button
-                        onClick={() => handleRemoveKeyword(keyword)}
-                        className="hover:bg-red-100 text-slate-600 hover:text-red-500 px-2 py-1.5 rounded-r-full transition-colors"
-                      >
-                        <FiTrash2 size={14} />
+                        <FiPlus size={14} />
                       </button>
                     </div>
-                  ))}
+                  </div>
+                  
+                  {selectedKeywords.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedKeywords.map(keyword => (
+                        <div key={keyword} className="group relative">
+                          <button
+                            onClick={() => handleKeywordToggle(keyword)}
+                            className="px-2 py-1 rounded-l-md text-xs font-medium bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                          >
+                            {keyword}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveKeyword(keyword)}
+                            className="px-1 py-1 rounded-r-md text-xs bg-blue-600 text-white hover:bg-red-500 transition-colors"
+                          >
+                            <FiTrash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <input
-                    type="text"
-                    placeholder="Add new keyword"
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-                    className="w-full sm:w-auto rounded-lg border-slate-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 transition"
-                  />
-                  <button
-                    onClick={handleAddKeyword}
-                    className="flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-                  >
-                    <FiPlus className="mr-1" /> Add
-                  </button>
-                </div>
-              </div>
 
-              <div className="border-t border-slate-200 pt-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <nav className="flex items-center flex-wrap gap-x-6 gap-y-2" aria-label="Tabs">
-                    <span className="font-semibold text-slate-700">Select Resume:</span>
-                    {profile.resumes.map(resume => (
-                      <button
-                        key={resume.id}
-                        onClick={() => handleResumeTabClick(resume.id)}
-                        className={`whitespace-nowrap pb-2 px-1 border-b-4 font-medium text-base transition-colors duration-200 ${
-                          selectedResumeId === resume.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        {resume.name}
-                      </button>
-                    ))}
+                {/* Resume Selection & Action */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-4 border-t border-slate-200">
+                  <nav className="flex items-center gap-x-4" aria-label="Tabs">
+                    <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">Resume:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {profile.resumes.map(resume => (
+                        <button
+                          key={resume.id}
+                          onClick={() => handleResumeTabClick(resume.id)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            selectedResumeId === resume.id
+                              ? 'bg-blue-500 text-white shadow-md'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {resume.name}
+                        </button>
+                      ))}
+                    </div>
                   </nav>
+
                   {isMatching ? (
                     <ProgressButton progress={matchingProgress} onClick={handleCancel} />
                   ) : (
                     <button
                       onClick={handleDiscoverJobs}
-                      className="flex items-center justify-center w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-semibold py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                       disabled={!selectedResumeId}
                     >
-                      <FiSearch className="mr-2" />
-                      Find Matching Jobs
+                      <FiSearch className="mr-2" size={16} />
+                      Find Jobs
                     </button>
                   )}
                 </div>

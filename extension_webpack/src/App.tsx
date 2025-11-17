@@ -7,6 +7,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import DesignSystemPage from './pages/DesignSystemPage';
+import AnswerGenerationPage from './pages/AnswerGenerationPage';
 import PasscodeComponent from './components/passcode/PasscodeComponent';
 import { getUserProfile, saveUserProfile } from './services/storageService';
 import CryptoJS from 'crypto-js';
@@ -96,6 +97,8 @@ const App: React.FC = () => {
               <SettingsPage onSettingsSave={updateConfigStatus} />
             </Layout>
           } />
+          {/* Answer Generation Popup - works independently */}
+          <Route path="/answer-generation" element={<AnswerGenerationPage />} />
         </Routes>
       </div>
     </>
