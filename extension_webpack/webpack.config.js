@@ -14,7 +14,6 @@ module.exports = (env, argv) => {
       linkedin: './src/content-scripts/linkedin.ts',
       autofill: './src/content-scripts/autofill.ts',
       answerGeneration: './src/content-scripts/answerGeneration.ts',
-      
       popup: './src/popup.ts',
     },
     output: {

@@ -456,32 +456,27 @@ async function handleOpenAnswerGenerationMenu(data: {
   }
 
   try {
-    // Open the extension popup window with the answer generation interface
-    console.log("Background: Creating popup window...");
-    const popupWindow = await chrome.windows.create({
-      url: chrome.runtime.getURL('popup.html#/answer-generation'),
-      type: 'popup',
-      width: 420,
-      height: 600,
-      left: Math.round(data.position.x),
-      top: Math.round(data.position.y)
+    // Store the data in session storage to be retrieved by content script
+    await chrome.storage.session.set({
+      [`answer_generation_${tabId}`]: {
+        selectedText: data.selectedText,
+        position: data.position,
+        tabId: tabId,
+        timestamp: Date.now()
+      }
     });
-    
-    console.log("Background: Popup window created:", popupWindow);
 
-    // Store the data temporarily to be retrieved by the popup
-    if (popupWindow?.id) {
-      console.log("Background: Storing data in session storage...");
-      await chrome.storage.session.set({
-        [`answer_generation_${popupWindow.id}`]: {
-          selectedText: data.selectedText,
-          position: data.position,
-          tabId: tabId
-        }
-      });
-      console.log("Background: Data stored successfully");
-    }
+    // Send message to content script to show the popup on the page
+    await chrome.tabs.sendMessage(tabId, {
+      type: "SHOW_ANSWER_POPUP",
+      data: {
+        selectedText: data.selectedText,
+        position: data.position
+      }
+    });
+
+    console.log("Background: Message sent to content script to show popup");
   } catch (error) {
-    console.error('Background: Error creating answer generation popup:', error);
+    console.error('Background: Error sending message to content script:', error);
   }
 }

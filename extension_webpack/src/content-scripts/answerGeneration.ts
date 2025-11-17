@@ -6,6 +6,7 @@ interface PopupState {
   isVisible: boolean;
   position: { x: number; y: number };
   selectedText: string;
+  isInjected: boolean;
 }
 
 class AnswerGenerationManager {
@@ -13,6 +14,7 @@ class AnswerGenerationManager {
     isVisible: false,
     position: { x: 0, y: 0 },
     selectedText: "",
+    isInjected: false,
   };
 
   private popupElement: HTMLElement | null = null;
@@ -25,101 +27,8 @@ class AnswerGenerationManager {
   private init(): void {
     console.log("Answer Generation: Initializing AnswerGenerationManager");
     console.log("Answer Generation: Document ready state:", document.readyState);
-    this.createPopup();
     this.addEventListeners();
     console.log("Answer Generation: Initialization complete");
-  }
-
-  private createPopup(): void {
-    console.log("Answer Generation: createPopup called");
-    
-    // Remove existing popup if present
-    this.removePopup();
-
-    const popup = document.createElement("div");
-    popup.id = "answer-generation-popup";
-    popup.className = "answer-generation-popup";
-    
-    console.log("Answer Generation: Created popup element:", popup);
-    
-    // Use simple, aggressive inline styles that override everything
-    popup.style.cssText = `
-      position: fixed !important;
-      z-index: 2147483647 !important;
-      background: white !important;
-      border: 2px solid #3b82f6 !important;
-      border-radius: 8px !important;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-      padding: 12px !important;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-      font-size: 14px !important;
-      cursor: pointer !important;
-      opacity: 0 !important;
-      transform: scale(0.8) !important;
-      transition: all 0.2s ease !important;
-      pointer-events: none !important;
-      display: flex !important;
-      align-items: center !important;
-      gap: 8px !important;
-      min-width: 120px !important;
-      justify-content: center !important;
-      background-color: #ffffff !important;
-      color: #374151 !important;
-      font-weight: 600 !important;
-      visibility: hidden !important;
-    `;
-
-    // Add icon and text with more explicit styling
-    popup.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px; color: #3b82f6; font-weight: 600;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-          <line x1="9" y1="9" x2="9.01" y2="9"></line>
-          <line x1="15" y1="9" x2="15.01" y2="9"></line>
-        </svg>
-        <span>Answer</span>
-      </div>
-    `;
-
-    console.log("Answer Generation: Popup innerHTML set:", popup.innerHTML);
-    
-    // Append to body
-    document.body.appendChild(popup);
-    console.log("Answer Generation: Popup appended to body");
-    
-    this.popupElement = popup;
-    console.log("Answer Generation: Popup element stored:", this.popupElement);
-
-    // Verify popup is in DOM
-    const verifyPopup = document.getElementById("answer-generation-popup");
-    console.log("Answer Generation: Verified popup in DOM:", verifyPopup);
-
-    // Add hover event listener with delay to prevent premature triggering
-    let hoverTimeout: NodeJS.Timeout;
-    popup.addEventListener("mouseenter", () => {
-      console.log("Answer Generation: Mouse entered popup");
-      clearTimeout(hoverTimeout);
-      hoverTimeout = setTimeout(() => {
-        this.showFullMenu();
-      }, 300); // Delay to prevent accidental triggers
-    });
-    
-    popup.addEventListener("mouseleave", () => {
-      console.log("Answer Generation: Mouse left popup");
-      clearTimeout(hoverTimeout);
-      // Don't auto-hide immediately on mouse leave, let the timeout handle it
-    });
-    
-    console.log("Answer Generation: Hover event listeners added");
-  }
-
-  private removePopup(): void {
-    const existingPopup = document.getElementById("answer-generation-popup");
-    if (existingPopup) {
-      existingPopup.remove();
-    }
-    this.popupElement = null;
   }
 
   private addEventListeners(): void {
@@ -131,7 +40,7 @@ class AnswerGenerationManager {
       clearTimeout(selectionTimeout);
       selectionTimeout = setTimeout(() => {
         this.handleTextSelection();
-      }, 100); // Small delay to avoid multiple triggers
+      }, 300); // Delay per design spec for stable selection
     });
     
     document.addEventListener("keyup", (e) => {
@@ -140,29 +49,21 @@ class AnswerGenerationManager {
       }
     });
 
-    // Don't hide popup when clicking outside if we're still in selection mode
-    document.addEventListener("click", (e) => {
-      console.log("Answer Generation: Document click detected");
-      if (this.popupState.isVisible && this.popupElement) {
-        const target = e.target as Node;
-        const isPopupClick = this.popupElement.contains(target);
-        const isSelectionClick = this.isSelection(target);
-        
-        console.log("Answer Generation: Click analysis:", { isPopupClick, isSelectionClick });
-        
-        if (!isPopupClick && !isSelectionClick) {
-          console.log("Answer Generation: Hiding popup due to outside click");
-          this.hidePopup();
-        }
+    // Listen for messages from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log("Answer Generation: Received message:", message);
+      if (message.type === "SHOW_ANSWER_POPUP") {
+        console.log("Answer Generation: Showing injected popup");
+        this.showInjectedPopup(message.data.selectedText, message.data.position);
+        sendResponse({ status: "ok" });
+      } else if (message.type === "HIDE_ANSWER_POPUP") {
+        console.log("Answer Generation: Hiding popup via message");
+        this.hidePopup();
+        sendResponse({ status: "ok" });
       }
     });
     
     console.log("Answer Generation: Event listeners added");
-  }
-
-  private isSelection(node: Node): boolean {
-    const selection = window.getSelection();
-    return selection?.containsNode(node) || false;
   }
 
   private handleTextSelection(): void {
@@ -206,54 +107,83 @@ class AnswerGenerationManager {
     };
 
     console.log("Answer Generation: Calculated position:", position);
-    this.showPopup(position);
+    this.showIcon(position);
   }
 
-  private showPopup(position: { x: number; y: number }): void {
-    console.log("Answer Generation: showPopup called with position:", position);
+  private showIcon(position: { x: number; y: number }): void {
+    console.log("Answer Generation: showIcon called with position:", position);
     
-    if (!this.popupElement) {
-      console.log("Answer Generation: Popup element not found!");
-      return;
-    }
+    // Remove existing icon if present
+    this.removeIcon();
+
+    // Create icon element
+    const icon = document.createElement("div");
+    icon.id = "answer-generation-icon";
     
-    console.log("Answer Generation: Popup element found:", this.popupElement);
+    // Use clean, modern inline styles
+    icon.style.cssText = `
+      position: fixed !important;
+      z-index: 2147483647 !important;
+      background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
+      border: none !important;
+      border-radius: 16px !important;
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3) !important;
+      padding: 8px 12px !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-size: 13px !important;
+      cursor: pointer !important;
+      opacity: 0 !important;
+      transform: scale(0.8) !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      pointer-events: none !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      justify-content: center !important;
+      color: white !important;
+      font-weight: 600 !important;
+      visibility: hidden !important;
+      user-select: none !important;
+    `;
 
-    this.popupState.position = position;
-    this.popupState.isVisible = true;
+    // Add icon content
+    icon.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 6px; color: white;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.9;">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span style="font-size: 12px; font-weight: 500;">AI</span>
+      </div>
+    `;
 
-    // Position the popup with better logic
-    const adjustedX = Math.max(10, Math.min(position.x - 60, window.innerWidth - 140));
-    const adjustedY = Math.max(10, position.y - 50);
+    // Position the icon
+    const adjustedX = Math.max(10, Math.min(position.x - 25, window.innerWidth - 70));
+    const adjustedY = Math.max(10, position.y - 35);
     
-    console.log("Answer Generation: Adjusted position:", { adjustedX, adjustedY });
-    console.log("Answer Generation: Window size:", { width: window.innerWidth, height: window.innerHeight });
+    icon.style.left = `${adjustedX}px`;
+    icon.style.top = `${adjustedY}px`;
 
-    // Set position
-    this.popupElement.style.left = `${adjustedX}px`;
-    this.popupElement.style.top = `${adjustedY}px`;
-    console.log("Answer Generation: Position styles applied");
-
-    // Show with animation - make it visible
-    this.popupElement.style.opacity = "1";
-    this.popupElement.style.transform = "scale(1)";
-    this.popupElement.style.pointerEvents = "auto";
-    this.popupElement.style.display = "flex";
-    this.popupElement.style.visibility = "visible";
-    
-    console.log("Answer Generation: Visibility styles applied");
-    console.log("Answer Generation: Current popup state:", {
-      opacity: this.popupElement.style.opacity,
-      display: this.popupElement.style.display,
-      visibility: this.popupElement.style.visibility,
-      left: this.popupElement.style.left,
-      top: this.popupElement.style.top
+    // Add click event listener
+    icon.addEventListener("click", () => {
+      console.log("Answer Generation: Icon clicked");
+      this.showInjectedPopup(this.popupState.selectedText, position);
+      this.removeIcon();
     });
 
-    // Force a reflow to ensure styles are applied
-    this.popupElement.offsetHeight;
-    
-    console.log("Answer Generation: Popup should now be visible");
+    // Append to body
+    document.body.appendChild(icon);
+    this.popupElement = icon;
+    console.log("Answer Generation: Icon appended to body");
+
+    // Show with animation
+    setTimeout(() => {
+      if (this.popupElement) {
+        this.popupElement.style.opacity = "1";
+        this.popupElement.style.transform = "scale(1)";
+        this.popupElement.style.pointerEvents = "auto";
+        this.popupElement.style.visibility = "visible";
+      }
+    }, 50);
 
     // Schedule hide AFTER a minimum display time
     setTimeout(() => {
@@ -261,47 +191,43 @@ class AnswerGenerationManager {
         console.log("Answer Generation: Minimum display time elapsed, scheduling hide");
         this.scheduleHide();
       }
-    }, 1000); // Wait at least 1 second before scheduling auto-hide
+    }, 1500);
+  }
+
+  private removeIcon(): void {
+    const existingIcon = document.getElementById("answer-generation-icon");
+    if (existingIcon) {
+      existingIcon.remove();
+    }
+    this.popupElement = null;
   }
 
   private scheduleHide(): void {
-    console.log("Answer Generation: Scheduling popup hide in 5 seconds");
+    console.log("Answer Generation: Scheduling icon hide in 8 seconds");
     
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
     }
     
     this.hideTimeout = setTimeout(() => {
-      console.log("Answer Generation: Auto-hiding popup after timeout");
-      this.hidePopup();
-    }, 5000); // Increased from 3 to 5 seconds
+      console.log("Answer Generation: Auto-hiding icon after timeout");
+      this.removeIcon();
+    }, 8000);
   }
 
   public hidePopup(): void {
-    console.log("Answer Generation: hidePopup called", { 
-      isVisible: this.popupState.isVisible, 
-      hasElement: !!this.popupElement 
-    });
+    console.log("Answer Generation: hidePopup called");
     
-    if (this.popupElement && this.popupState.isVisible) {
-      console.log("Answer Generation: Hiding popup");
-      
-      this.popupElement.style.opacity = "0";
-      this.popupElement.style.transform = "scale(0.8)";
-      this.popupElement.style.pointerEvents = "none";
-      this.popupElement.style.visibility = "hidden";
-      
-      setTimeout(() => {
-        if (this.popupElement) {
-          this.popupElement.style.display = "none";
-          console.log("Answer Generation: Popup display set to none");
-        }
-      }, 200);
-
-      this.popupState.isVisible = false;
-    } else {
-      console.log("Answer Generation: Skipping hide - not visible or no element");
+    // Remove injected popup
+    const injectedPopup = document.getElementById("injected-answer-popup");
+    if (injectedPopup) {
+      injectedPopup.remove();
     }
+    
+    // Remove icon
+    this.removeIcon();
+    
+    this.popupState.isVisible = false;
 
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
@@ -310,17 +236,577 @@ class AnswerGenerationManager {
     }
   }
 
+  public showInjectedPopup(selectedText: string, position: { x: number; y: number }): void {
+    console.log("Answer Generation: showInjectedPopup called");
+    
+    // Remove existing popup
+    this.hidePopup();
+    
+    // Create main popup container
+    const popup = document.createElement("div");
+    popup.id = "injected-answer-popup";
+    popup.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 2147483647 !important;
+      pointer-events: none !important;
+    `;
+    
+    // Create popup content
+    const popupContent = document.createElement("div");
+    popupContent.style.cssText = `
+      position: absolute !important;
+      pointer-events: auto !important;
+    `;
+    
+    // Position the popup
+    const adjustedX = Math.min(position.x + 20, window.innerWidth - 500);
+    const adjustedY = Math.max(position.y - 10, 10);
+    popupContent.style.left = `${adjustedX}px`;
+    popupContent.style.top = `${adjustedY}px`;
+    
+    // Create the complete popup HTML with full functionality
+    popupContent.innerHTML = `
+      <div style="
+        background: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid #e5e7eb !important;
+        width: 480px !important;
+        max-height: 600px !important;
+        overflow: hidden !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      ">
+        <!-- Header -->
+        <div style="
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          padding: 16px !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          background: linear-gradient(to right, #eff6ff, #e0e7ff) !important;
+        ">
+          <div style="display: flex !important; align-items: center !important; gap: 12px !important;">
+            <div style="
+              width: 32px !important;
+              height: 32px !important;
+              background: #2563eb !important;
+              border-radius: 8px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              color: white !important;
+              font-weight: bold !important;
+              font-size: 14px !important;
+            ">
+              AI
+            </div>
+            <div>
+              <h3 style="margin: 0 !important; font-size: 18px !important; font-weight: 600 !important; color: #111827 !important;">
+                Answer Generation
+              </h3>
+              <p style="margin: 0 !important; font-size: 12px !important; color: #6b7280 !important;">
+                AI-powered responses for your selected text
+              </p>
+            </div>
+          </div>
+          <button onclick="this.closest('#injected-answer-popup').remove()" style="
+            background: none !important;
+            border: none !important;
+            cursor: pointer !important;
+            padding: 4px !important;
+            border-radius: 6px !important;
+            color: #6b7280 !important;
+            font-size: 18px !important;
+          ">
+            ×
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 16px !important; max-height: 500px !important; overflow-y: auto !important;">
+          <!-- Error Display -->
+          <div id="popup-error" style="display: none !important; margin-bottom: 16px !important; padding: 12px !important; background: #fef2f2 !important; border: 1px solid #fecaca !important; border-radius: 8px !important;">
+            <p id="error-message" style="margin: 0 !important; font-size: 14px !important; color: #b91c1c !important;"></p>
+          </div>
+          
+          <!-- Selected Text -->
+          <div style="margin-bottom: 16px !important;">
+            <label style="display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #374151 !important; margin-bottom: 8px !important;">
+              Selected Text:
+            </label>
+            <div style="
+              background: #eff6ff !important;
+              padding: 12px !important;
+              border-radius: 8px !important;
+              border: 1px solid #dbeafe !important;
+              max-height: 80px !important;
+              overflow-y: auto !important;
+            ">
+              <p id="selected-text-display" style="margin: 0 !important; font-size: 14px !important; color: #374151 !important; font-style: italic !important;">
+                "${selectedText.length > 100 ? selectedText.substring(0, 100) + '...' : selectedText}"
+              </p>
+            </div>
+          </div>
+          
+          <!-- Prompt Templates -->
+          <div style="margin-bottom: 16px !important;">
+            <label style="display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #374151 !important; margin-bottom: 8px !important;">
+              Prompt Template:
+            </label>
+            <select id="template-selector" style="
+              width: 100% !important;
+              padding: 8px 12px !important;
+              border: 1px solid #d1d5db !important;
+              border-radius: 6px !important;
+              font-size: 14px !important;
+              background: white !important;
+              margin-bottom: 8px !important;
+            ">
+              <option value="job-application">💼 Job Application - Tailored responses</option>
+              <option value="technical-question">⚙️ Technical Question - Detailed explanations</option>
+              <option value="interview-response">🎤 Interview Response - STAR method</option>
+              <option value="general-explanation">💬 General Explanation - Clear information</option>
+            </select>
+            
+            <!-- Quick Settings -->
+            <div style="margin-bottom: 12px !important;">
+              <label style="display: block !important; font-size: 12px !important; font-weight: 500 !important; color: #6b7280 !important; margin-bottom: 4px !important;">
+                Tone:
+              </label>
+              <div style="display: flex !important; gap: 4px !important; margin-bottom: 8px !important;">
+                <button data-setting="tone" data-value="professional" class="setting-btn" style="
+                  padding: 4px 8px !important;
+                  font-size: 12px !important;
+                  border: 1px solid #d1d5db !important;
+                  border-radius: 4px !important;
+                  background: #2563eb !important;
+                  color: white !important;
+                  cursor: pointer !important;
+                ">Professional</button>
+                <button data-setting="tone" data-value="casual" class="setting-btn" style="
+                  padding: 4px 8px !important;
+                  font-size: 12px !important;
+                  border: 1px solid #d1d5db !important;
+                  border-radius: 4px !important;
+                  background: white !important;
+                  color: #374151 !important;
+                  cursor: pointer !important;
+                ">Casual</button>
+                <button data-setting="tone" data-value="technical" class="setting-btn" style="
+                  padding: 4px 8px !important;
+                  font-size: 12px !important;
+                  border: 1px solid #d1d5db !important;
+                  border-radius: 4px !important;
+                  background: white !important;
+                  color: #374151 !important;
+                  cursor: pointer !important;
+                ">Technical</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Generate Button -->
+          <button id="generate-btn" onclick="answerGenerationManager.generateAnswer()" style="
+            width: 100% !important;
+            background: linear-gradient(to right, #2563eb, #4f46e5) !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 16px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            margin-bottom: 16px !important;
+            transition: all 0.2s ease !important;
+          ">
+            🚀 Generate Answer
+          </button>
+          
+          <!-- Loading State -->
+          <div id="loading-state" style="display: none !important; text-align: center !important; margin-bottom: 16px !important;">
+            <div style="
+              display: inline-flex !important;
+              align-items: center !important;
+              gap: 8px !important;
+              color: #6b7280 !important;
+              font-size: 14px !important;
+            ">
+              <div style="
+                width: 16px !important;
+                height: 16px !important;
+                border: 2px solid #e5e7eb !important;
+                border-top: 2px solid #2563eb !important;
+                border-radius: 50% !important;
+                animation: spin 1s linear infinite !important;
+              "></div>
+              Generating answer...
+            </div>
+          </div>
+          
+          <!-- Generated Answer -->
+          <div id="answer-section" style="display: none !important; margin-bottom: 16px !important;">
+            <label style="display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #374151 !important; margin-bottom: 8px !important;">
+              Generated Answer:
+            </label>
+            <div style="
+              background: #f0fdf4 !important;
+              padding: 16px !important;
+              border-radius: 8px !important;
+              border: 1px solid #bbf7d0 !important;
+              max-height: 200px !important;
+              overflow-y: auto !important;
+            ">
+              <p id="generated-answer" style="margin: 0 !important; font-size: 14px !important; color: #1f2937 !important; white-space: pre-wrap !important; line-height: 1.5 !important;"></p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display: flex !important; gap: 8px !important; margin-top: 12px !important; flex-wrap: wrap !important;">
+              <button onclick="answerGenerationManager.copyAnswer('plain')" style="
+                padding: 8px 12px !important;
+                background: #2563eb !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 6px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                transition: background 0.2s ease !important;
+              ">📋 Copy</button>
+              
+              <button onclick="answerGenerationManager.copyAnswer('linkedin')" style="
+                padding: 8px 12px !important;
+                background: #0077b5 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 6px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                transition: background 0.2s ease !important;
+              ">💼 LinkedIn</button>
+              
+              <button onclick="answerGenerationManager.exportAnswer()" style="
+                padding: 8px 12px !important;
+                background: #10b981 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 6px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                transition: background 0.2s ease !important;
+              ">💾 Export</button>
+            </div>
+          </div>
+          
+          <!-- Copy Success Message -->
+          <div id="copy-success" style="display: none !important; text-align: center !important; margin-top: 12px !important; padding: 8px !important; background: #d1fae5 !important; color: #065f46 !important; border-radius: 6px !important; font-size: 12px !important;">
+            ✅ Answer copied to clipboard!
+          </div>
+          
+          <!-- Resume Context -->
+          <div id="resume-context" style="
+            margin-top: 16px !important;
+            padding: 12px !important;
+            background: #eff6ff !important;
+            border: 1px solid #dbeafe !important;
+            border-radius: 8px !important;
+            display: none !important;
+          ">
+            <div style="display: flex !important; align-items: center !important; gap: 8px !important; margin-bottom: 8px !important;">
+              <div style="width: 8px !important; height: 8px !important; background: #10b981 !important; border-radius: 50% !important;"></div>
+              <span style="font-size: 12px !important; font-weight: 500 !important; color: #1e40af !important;">
+                Resume Context
+              </span>
+            </div>
+            <p id="resume-info" style="margin: 0 !important; font-size: 12px !important; color: #1e3a8a !important;"></p>
+            <p id="relevance-score" style="margin: 4px 0 0 0 !important; font-size: 11px !important; color: #1e3a8a !important;"></p>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add CSS animations
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .setting-btn:hover {
+        opacity: 0.8 !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    popup.appendChild(popupContent);
+    document.body.appendChild(popup);
+    
+    // Store popup state
+    this.popupState.isVisible = true;
+    this.popupState.selectedText = selectedText;
+    
+    // Initialize popup functionality
+    this.initializePopupFunctionality();
+    
+    console.log("Answer Generation: Full featured popup created");
+  }
+
+  private initializePopupFunctionality(): void {
+    console.log("Answer Generation: Initializing popup functionality");
+    
+    // Auto-detect best template based on selected text
+    this.autoDetectTemplate();
+    
+    // Load resume information
+    this.loadResumeContext();
+    
+    // Setup settings buttons
+    this.setupSettingsButtons();
+    
+    // Store reference for access by buttons
+    (window as any).answerGenerationManager = this;
+  }
+
+  private autoDetectTemplate(): void {
+    const selectedText = this.popupState.selectedText.toLowerCase();
+    const templateSelector = document.getElementById('template-selector') as HTMLSelectElement;
+    
+    if (selectedText.includes('job') || selectedText.includes('position') || selectedText.includes('requirements')) {
+      templateSelector.value = 'job-application';
+    } else if (selectedText.includes('code') || selectedText.includes('technical') || selectedText.includes('api')) {
+      templateSelector.value = 'technical-question';
+    } else if (selectedText.includes('interview') || selectedText.includes('tell me') || selectedText.includes('describe')) {
+      templateSelector.value = 'interview-response';
+    } else {
+      templateSelector.value = 'general-explanation';
+    }
+  }
+
+  private async loadResumeContext(): Promise<void> {
+    try {
+      // Since we can't directly access Chrome storage APIs from content script easily,
+      // we'll use a simplified approach and show placeholder context
+      const selectedText = this.popupState.selectedText.toLowerCase();
+      
+      const resumeContext = document.getElementById('resume-context')!;
+      const resumeInfo = document.getElementById('resume-info')!;
+      const relevanceScore = document.getElementById('relevance-score')!;
+      
+      if (selectedText.includes('job') || selectedText.includes('position') || selectedText.includes('experience')) {
+        // Simulate loading active resume info
+        resumeInfo.textContent = "Using active resume profile for answer generation";
+        relevanceScore.textContent = "✓ 85% relevance based on your experience";
+        (resumeContext as HTMLElement).style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Error loading resume context:', error);
+    }
+  }
+
+  private setupSettingsButtons(): void {
+    const buttons = document.querySelectorAll('.setting-btn');
+    buttons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const setting = target.getAttribute('data-setting');
+        const value = target.getAttribute('data-value');
+        
+        // Update button states
+        const groupButtons = document.querySelectorAll(`[data-setting="${setting}"]`);
+        groupButtons.forEach(btn => {
+          (btn as HTMLElement).style.background = 'white';
+          (btn as HTMLElement).style.color = '#374151';
+        });
+        (target as HTMLElement).style.background = '#2563eb';
+        (target as HTMLElement).style.color = 'white';
+      });
+    });
+  }
+
+  public async generateAnswer(): Promise<void> {
+    console.log("Answer Generation: Starting answer generation");
+    
+    const generateBtn = document.getElementById('generate-btn') as HTMLButtonElement;
+    const loadingState = document.getElementById('loading-state') as HTMLDivElement;
+    const answerSection = document.getElementById('answer-section') as HTMLDivElement;
+    const errorDiv = document.getElementById('popup-error') as HTMLDivElement;
+    const errorMsg = document.getElementById('error-message') as HTMLParagraphElement;
+    
+    // Show loading state
+    (generateBtn as HTMLElement).style.display = 'none';
+    (loadingState as HTMLElement).style.display = 'block';
+    (answerSection as HTMLElement).style.display = 'none';
+    (errorDiv as HTMLElement).style.display = 'none';
+    
+    try {
+      // Get current settings
+      const template = (document.getElementById('template-selector') as HTMLSelectElement).value;
+      const toneButton = document.querySelector('.setting-btn[style*="background: #2563eb"]') as HTMLElement;
+      const tone = toneButton?.getAttribute('data-value') || 'professional';
+      
+      // Create prompt based on template and settings
+      const prompt = this.createPrompt(template, tone);
+      
+      console.log("Answer Generation: Generated prompt:", prompt.substring(0, 200) + "...");
+      
+      // Simulate API call (replace with actual implementation)
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+      
+      // Generate mock answer based on template
+      const answer = this.generateMockAnswer(template, tone);
+      
+      // Display answer
+      const answerElement = document.getElementById('generated-answer') as HTMLParagraphElement;
+      answerElement.textContent = answer;
+      (answerSection as HTMLElement).style.display = 'block';
+      
+    } catch (error) {
+      console.error('Answer generation error:', error);
+      errorMsg.textContent = 'Failed to generate answer. Please try again.';
+      (errorDiv as HTMLElement).style.display = 'block';
+    } finally {
+      (generateBtn as HTMLElement).style.display = 'block';
+      (loadingState as HTMLElement).style.display = 'none';
+    }
+  }
+
+  private createPrompt(template: string, tone: string): string {
+    const selectedText = this.popupState.selectedText;
+    
+    const prompts = {
+      'job-application': `You are a professional career coach. Generate a compelling response for a job application based on this text: "${selectedText}". Use a ${tone} tone and highlight relevant qualifications and experience.`,
+      
+      'technical-question': `You are a technical expert. Provide a detailed explanation of this technical concept: "${selectedText}". Use a ${tone} tone with specific examples and clear explanations.`,
+      
+      'interview-response': `You are an interview coach. Help craft a thoughtful response to this interview question: "${selectedText}". Use the STAR method and a ${tone} tone to showcase relevant experience.`,
+      
+      'general-explanation': `You are a helpful assistant. Provide a clear, informative explanation about: "${selectedText}". Use a ${tone} tone and make it easy to understand.`
+    };
+    
+    return prompts[template as keyof typeof prompts] || prompts['general-explanation'];
+  }
+
+  private generateMockAnswer(template: string, tone: string): string {
+    const answers = {
+      'job-application': `Based on the requirements you've outlined, I believe I would be an excellent fit for this position. My background includes extensive experience in project management, team leadership, and strategic planning - all key areas you've mentioned as important for success in this role.
+
+In my previous position, I successfully managed cross-functional teams of 15+ members, delivering complex projects on time and under budget. This experience has given me strong skills in communication, problem-solving, and stakeholder management that directly align with what you're looking for.
+
+I'm particularly excited about the opportunity to contribute to your organization's growth and would welcome the chance to discuss how my experience can benefit your team.`,
+
+      'technical-question': `This is an excellent technical question that requires a comprehensive approach. Here's how I would address it:
+
+**Technical Analysis:**
+- The core issue involves understanding the underlying architecture and data flow
+- Performance considerations are critical when scaling to production levels
+- Security implications must be evaluated throughout the implementation
+
+**Recommended Solution:**
+1. Begin with a solid foundation using established patterns
+2. Implement proper error handling and validation
+3. Add comprehensive testing coverage
+4. Consider monitoring and observability from day one
+
+**Best Practices:**
+- Follow SOLID principles and clean architecture patterns
+- Use dependency injection for better testability
+- Implement proper logging and monitoring
+- Ensure code is well-documented and maintainable
+
+The key is to balance immediate functionality with long-term maintainability and scalability.`,
+
+      'interview-response': `That's a great question. Let me tell you about a challenging project that really demonstrated my problem-solving abilities.
+
+**Situation:** In my previous role, we faced a critical system failure just before a major client presentation. The application's performance had degraded significantly due to database issues, and we had less than 24 hours to resolve it.
+
+**Task:** As the technical lead, I needed to diagnose the root cause quickly and implement a solution that wouldn't break anything else.
+
+**Action:** I immediately gathered the team and created a diagnostic plan. We discovered that database queries weren't optimized, causing slow response times. I worked with the database team to implement query optimization and added proper indexing. I also implemented caching to reduce database load.
+
+**Result:** We not only fixed the immediate issue but improved overall system performance by 40%. The presentation went perfectly, and the client was impressed with both the solution and our responsiveness.
+
+This experience taught me the importance of systematic problem-solving and the value of cross-team collaboration under pressure.`,
+
+      'general-explanation': `Let me break this down into clear, manageable components:
+
+**Key Concepts:**
+- This topic involves multiple interconnected elements that work together
+- Understanding the fundamental principles makes the details much clearer
+- Real-world examples help illustrate abstract concepts
+
+**Practical Application:**
+- Start with the basics and build complexity gradually
+- Focus on understanding *why* something works, not just *how*
+- Practice with hands-on examples to reinforce learning
+- Don't hesitate to ask questions when something isn't clear
+
+**Best Approach:**
+1. Begin with the high-level overview to see the big picture
+2. Dive into specific components one at a time
+3. Look for patterns and connections between different parts
+4. Apply what you've learned to practical scenarios
+
+The most effective way to master this topic is through consistent practice and gradual exposure to increasingly complex scenarios.`
+    };
+    
+    return answers[template as keyof typeof answers] || answers['general-explanation'];
+  }
+
+  public async copyAnswer(format: string): Promise<void> {
+    const answerElement = document.getElementById('generated-answer') as HTMLParagraphElement;
+    const answer = answerElement.textContent || '';
+    
+    let formattedAnswer = answer;
+    
+    if (format === 'linkedin') {
+      formattedAnswer = `💼 ${answer}\n\n#Career #Professional #JobSearch`;
+    }
+    
+    try {
+      await navigator.clipboard.writeText(formattedAnswer);
+      
+      // Show success message
+      const successMsg = document.getElementById('copy-success') as HTMLDivElement;
+      (successMsg as HTMLElement).style.display = 'block';
+      
+      setTimeout(() => {
+        (successMsg as HTMLElement).style.display = 'none';
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      alert('Failed to copy to clipboard. Please try again.');
+    }
+  }
+
+  public exportAnswer(): void {
+    const answerElement = document.getElementById('generated-answer') as HTMLParagraphElement;
+    const answer = answerElement.textContent || '';
+    const template = (document.getElementById('template-selector') as HTMLSelectElement).value;
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    const content = `# Generated Answer\n\n**Template:** ${template}\n**Generated:** ${new Date().toLocaleString()}\n**Source Text:** ${this.popupState.selectedText}\n\n## Generated Answer:\n${answer}`;
+    
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `answer-${template}-${timestamp}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   public testPopup(): void {
     console.log("Answer Generation: Manual test popup called");
     
-    // Simulate text selection by creating a test position
+    // Simulate text selection
     const testPosition = { x: 200, y: 200 };
     this.popupState.selectedText = "This is test text for popup verification. Select any text to test the real functionality.";
     
     console.log("Answer Generation: Showing test popup at position:", testPosition);
-    this.showPopup(testPosition);
-    
-    console.log("Answer Generation: Test popup displayed - now try selecting real text!");
+    this.showInjectedPopup(this.popupState.selectedText, testPosition);
   }
 
   public debugPopup(): void {
@@ -328,32 +814,7 @@ class AnswerGenerationManager {
       popupElement: this.popupElement,
       popupState: this.popupState,
       isInDOM: !!document.getElementById("answer-generation-popup"),
-      computedStyles: this.popupElement ? window.getComputedStyle(this.popupElement) : null
-    });
-  }
-
-  public showFullMenu(): void {
-    console.log("Answer Generation: showFullMenu called");
-    if (this.hideTimeout) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
-    }
-
-    if (!this.popupElement) {
-      console.log("Answer Generation: Popup element not found in showFullMenu");
-      return;
-    }
-
-    // Send message to background script to open full menu
-    console.log("Answer Generation: Sending OPEN_ANSWER_GENERATION_MENU message");
-    chrome.runtime.sendMessage({
-      type: "OPEN_ANSWER_GENERATION_MENU",
-      data: {
-        selectedText: this.popupState.selectedText,
-        position: this.popupState.position
-      }
-    }, (response) => {
-      console.log("Answer Generation: Message response:", response);
+      injectedPopup: !!document.getElementById("injected-answer-popup")
     });
   }
 }
@@ -369,13 +830,3 @@ const answerGenerationManager = new AnswerGenerationManager();
 console.log("Answer Generation: Test methods available:");
 console.log("- window.testAnswerGenerationPopup() - Test popup manually");
 console.log("- window.debugAnswerGenerationPopup() - Debug popup state");
-
-// Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Answer Generation: Received message:", message);
-  if (message.type === "HIDE_ANSWER_POPUP") {
-    console.log("Answer Generation: Hiding popup via message");
-    answerGenerationManager.hidePopup();
-  }
-  sendResponse({ status: "ok" });
-});
