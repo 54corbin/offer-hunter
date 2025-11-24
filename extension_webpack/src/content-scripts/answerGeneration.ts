@@ -410,7 +410,7 @@ class AnswerGenerationManager {
           </div>
           
           <!-- Generate Button -->
-          <button id="generate-btn" onclick="answerGenerationManager.generateAnswer()" style="
+          <button id="generate-btn" onclick="window.answerGenerationManager.generateAnswer()" style="
             width: 100% !important;
             background: linear-gradient(to right, #2563eb, #4f46e5) !important;
             color: white !important;
@@ -465,7 +465,7 @@ class AnswerGenerationManager {
             
             <!-- Action Buttons -->
             <div style="display: flex !important; gap: 8px !important; margin-top: 12px !important; flex-wrap: wrap !important;">
-              <button onclick="answerGenerationManager.copyAnswer('plain')" style="
+              <button onclick="window.answerGenerationManager.copyAnswer('plain')" style="
                 padding: 8px 12px !important;
                 background: #2563eb !important;
                 color: white !important;
@@ -476,7 +476,7 @@ class AnswerGenerationManager {
                 transition: background 0.2s ease !important;
               ">📋 Copy</button>
               
-              <button onclick="answerGenerationManager.copyAnswer('linkedin')" style="
+              <button onclick="window.answerGenerationManager.copyAnswer('linkedin')" style="
                 padding: 8px 12px !important;
                 background: #0077b5 !important;
                 color: white !important;
@@ -487,7 +487,7 @@ class AnswerGenerationManager {
                 transition: background 0.2s ease !important;
               ">💼 LinkedIn</button>
               
-              <button onclick="answerGenerationManager.exportAnswer()" style="
+              <button onclick="window.answerGenerationManager.exportAnswer()" style="
                 padding: 8px 12px !important;
                 background: #10b981 !important;
                 color: white !important;
