@@ -823,6 +823,13 @@ The most effective way to master this topic is through consistent practice and g
 console.log("Answer Generation: Creating AnswerGenerationManager instance");
 const answerGenerationManager = new AnswerGenerationManager();
 
+// Make manager globally accessible for popup onclick handlers
+(window as any).answerGenerationManager = answerGenerationManager;
+// Also expose individual methods as globals for direct onclick access
+(window as any).generateAnswer = () => answerGenerationManager.generateAnswer();
+(window as any).copyAnswer = (format: string) => answerGenerationManager.copyAnswer(format);
+(window as any).exportAnswer = () => answerGenerationManager.exportAnswer();
+
 // Make test methods globally available for debugging
 (window as any).testAnswerGenerationPopup = () => answerGenerationManager.testPopup();
 (window as any).debugAnswerGenerationPopup = () => answerGenerationManager.debugPopup();
