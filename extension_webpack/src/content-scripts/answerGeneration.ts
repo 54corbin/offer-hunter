@@ -1,6 +1,4 @@
-console.log("Answer Generation content script loaded.");
-console.log("Answer Generation: DOM ready state:", document.readyState);
-console.log("Answer Generation: Current URL:", window.location.href);
+
 
 interface PopupState {
   isVisible: boolean;
@@ -25,18 +23,10 @@ class AnswerGenerationManager {
   }
 
   private init(): void {
-    console.log("Answer Generation: Initializing AnswerGenerationManager");
-    console.log(
-      "Answer Generation: Document ready state:",
-      document.readyState,
-    );
     this.addEventListeners();
-    console.log("Answer Generation: Initialization complete");
   }
 
   private addEventListeners(): void {
-    console.log("Answer Generation: Adding event listeners");
-
     // Listen for text selection with debouncing
     let selectionTimeout: NodeJS.Timeout;
     document.addEventListener("mouseup", () => {
@@ -54,45 +44,29 @@ class AnswerGenerationManager {
 
     // Listen for messages from background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log("Answer Generation: Received message:", message);
       if (message.type === "SHOW_ANSWER_POPUP") {
-        console.log("Answer Generation: Showing injected popup");
         this.showInjectedPopup(
           message.data.selectedText,
           message.data.position,
         );
         sendResponse({ status: "ok" });
       } else if (message.type === "HIDE_ANSWER_POPUP") {
-        console.log("Answer Generation: Hiding popup via message");
         this.hidePopup();
         sendResponse({ status: "ok" });
       }
     });
-
-    console.log("Answer Generation: Event listeners added");
   }
 
   private handleTextSelection(): void {
-    console.log("Answer Generation: Text selection event triggered");
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
-      console.log("Answer Generation: No selection or collapsed selection");
       this.hidePopup();
       return;
     }
 
     const selectedText = selection.toString().trim();
-    console.log(
-      "Answer Generation: Selected text length:",
-      selectedText.length,
-    );
-    console.log(
-      "Answer Generation: Selected text preview:",
-      selectedText.substring(0, 50),
-    );
 
     if (selectedText.length < 10) {
-      console.log("Answer Generation: Selection too short (minimum 10 chars)");
       this.hidePopup();
       return;
     }
@@ -101,16 +75,13 @@ class AnswerGenerationManager {
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
-      console.log("Answer Generation: Cancelled pending hide timeout");
     }
 
     this.popupState.selectedText = selectedText;
-    console.log("Answer Generation: Storing selected text:", selectedText);
 
     // Get selection position
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    console.log("Answer Generation: Selection rect:", rect);
 
     // Calculate position
     const position = {
@@ -118,13 +89,10 @@ class AnswerGenerationManager {
       y: rect.top - 10,
     };
 
-    console.log("Answer Generation: Calculated position:", position);
     this.showIcon(position);
   }
 
   private showIcon(position: { x: number; y: number }): void {
-    console.log("Answer Generation: showIcon called with position:", position);
-
     // Remove existing icon if present
     this.removeIcon();
 
@@ -180,7 +148,6 @@ class AnswerGenerationManager {
 
     // Add click event listener
     icon.addEventListener("click", () => {
-      console.log("Answer Generation: Icon clicked");
       this.showInjectedPopup(this.popupState.selectedText, position);
       this.removeIcon();
     });
@@ -188,7 +155,6 @@ class AnswerGenerationManager {
     // Append to body
     document.body.appendChild(icon);
     this.popupElement = icon;
-    console.log("Answer Generation: Icon appended to body");
 
     // Show with animation
     setTimeout(() => {
@@ -203,9 +169,6 @@ class AnswerGenerationManager {
     // Schedule hide AFTER a minimum display time
     setTimeout(() => {
       if (this.popupState.isVisible) {
-        console.log(
-          "Answer Generation: Minimum display time elapsed, scheduling hide",
-        );
         this.scheduleHide();
       }
     }, 1500);
@@ -220,21 +183,16 @@ class AnswerGenerationManager {
   }
 
   private scheduleHide(): void {
-    console.log("Answer Generation: Scheduling icon hide in 8 seconds");
-
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
     }
 
     this.hideTimeout = setTimeout(() => {
-      console.log("Answer Generation: Auto-hiding icon after timeout");
       this.removeIcon();
     }, 8000);
   }
 
   public hidePopup(): void {
-    console.log("Answer Generation: hidePopup called");
-
     // Remove injected popup
     const injectedPopup = document.getElementById("injected-answer-popup");
     if (injectedPopup) {
@@ -249,7 +207,6 @@ class AnswerGenerationManager {
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
-      console.log("Answer Generation: Cleared hide timeout");
     }
   }
 
@@ -257,8 +214,6 @@ class AnswerGenerationManager {
     selectedText: string,
     position: { x: number; y: number },
   ): void {
-    console.log("Answer Generation: showInjectedPopup called");
-
     // Remove existing popup
     this.hidePopup();
 
@@ -275,8 +230,6 @@ class AnswerGenerationManager {
       pointer-events: none !important;
     `;
 
-    console.log("Answer Generation: Popup container created with z-index:", popup.style.zIndex);
-
     // Create popup content
     const popupContent = document.createElement("div");
     popupContent.style.cssText = `
@@ -284,13 +237,15 @@ class AnswerGenerationManager {
       pointer-events: auto !important;
     `;
 
-    console.log("Answer Generation: Popup content created with pointer-events:", popupContent.style.pointerEvents);
-
-    // Position the popup
-    const adjustedX = Math.min(position.x + 20, window.innerWidth - 500);
-    const adjustedY = Math.max(position.y - 10, 10);
-    popupContent.style.left = `${adjustedX}px`;
-    popupContent.style.top = `${adjustedY}px`;
+    // Position the popup at the top center of the page for better visibility
+    const popupWidth = 480;
+    const popupHeight = 600;
+    const centerX = (window.innerWidth - popupWidth) / 2;
+    const topY = 20; // Fixed position at top of page
+    
+    popupContent.style.left = `${Math.max(20, centerX)}px`;
+    popupContent.style.top = `${topY}px`;
+    popupContent.style.zIndex = "2147483647"; // Ensure it's always on top
 
     // Create the complete popup HTML with full functionality
     popupContent.innerHTML = `
@@ -330,11 +285,10 @@ class AnswerGenerationManager {
             </div>
             <div>
               <h3 style="margin: 0 !important; font-size: 18px !important; font-weight: 600 !important; color: #111827 !important;">
-                Answer Generation
+                Answer Generation 📌
               </h3>
               <p style="margin: 0 !important; font-size: 12px !important; color: #6b7280 !important;">
-                AI-powered responses for your selected text
-              </p>
+                AI-powered responses • Pinned at top for visibility • Scroll to see more</p>
             </div>
           </div>
           <button onclick="this.closest('#injected-answer-popup').remove()" style="
@@ -359,19 +313,59 @@ class AnswerGenerationManager {
 
           <!-- Selected Text -->
           <div style="margin-bottom: 16px !important;">
-            <label style="display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #374151 !important; margin-bottom: 8px !important;">
-              Selected Text:
-            </label>
             <div style="
-              background: #eff6ff !important;
-              padding: 12px !important;
-              border-radius: 8px !important;
-              border: 1px solid #dbeafe !important;
-              max-height: 80px !important;
-              overflow-y: auto !important;
+              display: flex !important; 
+              align-items: center !important; 
+              gap: 8px !important; 
+              margin-bottom: 8px !important;
             ">
-              <p id="selected-text-display" style="margin: 0 !important; font-size: 14px !important; color: #374151 !important; font-style: italic !important;">
-                "${selectedText.length > 100 ? selectedText.substring(0, 100) + "..." : selectedText}"
+              <div style="
+                width: 12px !important; 
+                height: 12px !important; 
+                background: #f59e0b !important; 
+                border-radius: 50% !important;
+                animation: pulse 2s infinite !important;
+              "></div>
+              <label style="
+                display: block !important; 
+                font-size: 14px !important; 
+                font-weight: 600 !important; 
+                color: #92400e !important;
+              ">
+                📝 Selected Text
+              </label>
+            </div>
+            <div style="
+              background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+              padding: 16px !important;
+              border-radius: 8px !important;
+              border: 2px solid #fbbf24 !important;
+              max-height: 100px !important;
+              overflow-y: auto !important;
+              position: relative !important;
+            ">
+              <div style="
+                position: absolute !important;
+                top: -8px !important;
+                left: 16px !important;
+                background: #f59e0b !important;
+                color: white !important;
+                padding: 2px 8px !important;
+                border-radius: 4px !important;
+                font-size: 10px !important;
+                font-weight: 500 !important;
+              ">
+                HIGHLIGHTED
+              </div>
+              <p id="selected-text-display" style="
+                margin: 0 !important; 
+                font-size: 14px !important; 
+                color: #92400e !important; 
+                font-style: italic !important;
+                line-height: 1.4 !important;
+                margin-top: 8px !important;
+              ">
+                "${selectedText.length > 150 ? selectedText.substring(0, 150) + "..." : selectedText}"
               </p>
             </div>
           </div>
@@ -488,39 +482,19 @@ class AnswerGenerationManager {
             </div>
 
             <!-- Action Buttons -->
-            <div style="display: flex !important; gap: 8px !important; margin-top: 12px !important; flex-wrap: wrap !important;">
-              <button onclick="(window.safeAnswerGenerationManager||{}).copyAnswer && (window.safeAnswerGenerationManager).copyAnswer('plain')" style="
-                padding: 8px 12px !important;
-                background: #2563eb !important;
+            <div style="display: flex !important; justify-content: center !important; margin-top: 12px !important;">
+              <button onclick="(window.safeAnswerGenerationManager||{}).copyAnswer && (window.safeAnswerGenerationManager).copyAnswer()" style="
+                padding: 12px 24px !important;
+                background: linear-gradient(to right, #2563eb, #4f46e5) !important;
                 color: white !important;
                 border: none !important;
-                border-radius: 6px !important;
-                font-size: 12px !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+                font-weight: 600 !important;
                 cursor: pointer !important;
-                transition: background 0.2s ease !important;
-              ">📋 Copy</button>
-
-              <button onclick="(window.safeAnswerGenerationManager||{}).copyAnswer && (window.safeAnswerGenerationManager).copyAnswer('linkedin')" style="
-                padding: 8px 12px !important;
-                background: #0077b5 !important;
-                color: white !important;
-                border: none !important;
-                border-radius: 6px !important;
-                font-size: 12px !important;
-                cursor: pointer !important;
-                transition: background 0.2s ease !important;
-              ">💼 LinkedIn</button>
-
-              <button onclick="(window.safeAnswerGenerationManager||{}).exportAnswer && (window.safeAnswerGenerationManager).exportAnswer()" style="
-                padding: 8px 12px !important;
-                background: #10b981 !important;
-                color: white !important;
-                border: none !important;
-                border-radius: 6px !important;
-                font-size: 12px !important;
-                cursor: pointer !important;
-                transition: background 0.2s ease !important;
-              ">💾 Export</button>
+                transition: all 0.2s ease !important;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+              " id="copy-answer-btn" data-debug="copy-button">📋 Copy Answer</button>
             </div>
           </div>
 
@@ -583,6 +557,29 @@ class AnswerGenerationManager {
               "></p>
             </div>
           </div>
+          
+          <!-- Scroll Indicator -->
+          <div style="
+            text-align: center !important;
+            padding: 8px !important;
+            background: #f8fafc !important;
+            border-top: 1px solid #e2e8f0 !important;
+            margin: 0 -16px -16px -16px !important;
+          ">
+            <p style="
+              margin: 0 !important; 
+              font-size: 11px !important; 
+              color: #64748b !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 4px !important;
+            ">
+              <span>⬇️</span>
+              Scroll to see generated answer
+              <span>⬇️</span>
+            </p>
+          </div>
         </div>
       </div>
     `;
@@ -607,30 +604,15 @@ class AnswerGenerationManager {
     popup.appendChild(popupContent);
     document.body.appendChild(popup);
 
-    console.log("Answer Generation: Popup appended to body");
-
     // Store popup state
     this.popupState.isVisible = true;
     this.popupState.selectedText = selectedText;
 
-    // Debug final popup state
-    console.log("Answer Generation: Final popup state:", {
-      popupExists: !!document.getElementById("injected-answer-popup"),
-      popupZIndex: (document.getElementById("injected-answer-popup") as HTMLElement)?.style.zIndex,
-      popupPointerEvents: (document.getElementById("injected-answer-popup") as HTMLElement)?.style.pointerEvents,
-      contentPointerEvents: (popupContent as HTMLElement).style.pointerEvents,
-      bodyHasPopup: document.body.contains(popup)
-    });
-
     // Initialize popup functionality
     this.initializePopupFunctionality();
-
-    console.log("Answer Generation: Full featured popup created");
   }
 
   private initializePopupFunctionality(): void {
-    console.log("Answer Generation: Initializing popup functionality");
-
     // Auto-detect best template based on selected text
     this.autoDetectTemplate();
 
@@ -643,37 +625,45 @@ class AnswerGenerationManager {
     // Setup generate button with both inline onclick AND event listener as fallback
     this.setupGenerateButton();
 
+    // Setup copy button with event listener as backup
+    this.setupCopyButton();
+
     // Store reference for access by buttons
     (window as any).answerGenerationManager = this;
   }
 
+  private setupCopyButton(): void {
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      const copyBtn = document.getElementById("copy-answer-btn") as HTMLButtonElement;
+      
+      if (copyBtn) {
+        // Add direct event listener as backup
+        copyBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Call copyAnswer method
+          this.copyAnswer();
+        });
+      } else {
+        console.error("Answer Generation: Copy button not found in DOM");
+      }
+    }, 200); // Increased delay to ensure DOM is fully ready
+  }
+
   private setupGenerateButton(): void {
-    console.log("Answer Generation: Setting up generate button");
-    
     // Wait a bit for DOM to be ready
     setTimeout(() => {
       const generateBtn = document.getElementById("generate-btn") as HTMLButtonElement;
-      console.log("Answer Generation: Generate button found:", !!generateBtn);
       
       if (generateBtn) {
-        console.log("Answer Generation: Generate button details:", {
-          id: generateBtn.id,
-          disabled: generateBtn.disabled,
-          style: generateBtn.style.cssText,
-          visible: generateBtn.offsetWidth > 0 && generateBtn.offsetHeight > 0,
-          zIndex: generateBtn.style.zIndex,
-          pointerEvents: generateBtn.style.pointerEvents
-        });
-
         // Add a direct event listener as fallback
         generateBtn.addEventListener("click", (e) => {
-          console.log("Answer Generation: Generate button clicked via event listener!");
           e.preventDefault();
           e.stopPropagation();
           this.generateAnswer();
         });
-
-        console.log("Answer Generation: Event listener added to generate button");
       } else {
         console.error("Answer Generation: Generate button not found!");
       }
@@ -764,7 +754,7 @@ class AnswerGenerationManager {
             
             (resumeContext as HTMLElement).style.display = "block";
           } else {
-            console.log("No active resume found");
+            // No active resume found
           }
         } else {
           // No resumes found
@@ -852,15 +842,8 @@ class AnswerGenerationManager {
   }
 
   public async generateAnswer(): Promise<void> {
-    console.log("Answer Generation: Starting answer generation");
-    console.log("Answer Generation: Method called on manager:", this);
-    console.log("Answer Generation: Document ready state:", document.readyState);
-    console.log("Answer Generation: Selected text:", this.popupState.selectedText);
-    console.log("Answer Generation: Popup visible:", this.popupState.isVisible);
-
     // Check if popup exists
     const popup = document.getElementById("injected-answer-popup");
-    console.log("Answer Generation: Popup exists:", !!popup);
 
     const generateBtn = document.getElementById(
       "generate-btn",
@@ -876,14 +859,6 @@ class AnswerGenerationManager {
       "error-message",
     ) as HTMLParagraphElement;
 
-    console.log("Answer Generation: DOM elements found:", {
-      generateBtn: !!generateBtn,
-      loadingState: !!loadingState,
-      answerSection: !!answerSection,
-      errorDiv: !!errorDiv,
-      errorMsg: !!errorMsg,
-    });
-
     // Show loading state
     (generateBtn as HTMLElement).style.display = "none";
     (loadingState as HTMLElement).style.display = "block";
@@ -891,27 +866,18 @@ class AnswerGenerationManager {
     (errorDiv as HTMLElement).style.display = "none";
 
     try {
-      console.log("Answer Generation: Entering try block");
-
       // Get current settings
       const template = (
         document.getElementById("template-selector") as HTMLSelectElement
       ).value;
-      console.log("Answer Generation: Template selected:", template);
 
       const toneButton = document.querySelector(
         '.setting-btn[style*="background: #2563eb"]',
       ) as HTMLElement;
       const tone = toneButton?.getAttribute("data-value") || "professional";
-      console.log("Answer Generation: Tone selected:", tone);
 
       // Create prompt based on template and settings
       const prompt = this.createPrompt(template, tone);
-
-      console.log(
-        "Answer Generation: Generated prompt:",
-        prompt.substring(0, 200) + "...",
-      );
 
       // Simulate API call (replace with actual implementation)
       await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
@@ -1023,111 +989,124 @@ The most effective way to master this topic is through consistent practice and g
     );
   }
 
-  public async copyAnswer(format: string): Promise<void> {
+  public async copyAnswer(): Promise<void> {
     const answerElement = document.getElementById(
       "generated-answer",
     ) as HTMLParagraphElement;
+    
+    if (!answerElement) {
+      console.error("Copy Answer: Answer element not found");
+      return;
+    }
+    
     const answer = answerElement.textContent || "";
-
-    let formattedAnswer = answer;
-
-    if (format === "linkedin") {
-      formattedAnswer = `💼 ${answer}\n\n#Career #Professional #JobSearch`;
+    
+    if (!answer.trim()) {
+      console.error("Copy Answer: No answer text to copy");
+      return;
     }
 
     try {
-      await navigator.clipboard.writeText(formattedAnswer);
+      // Try the modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(answer);
+      } else {
+        // Fallback for older browsers or restricted contexts
+        this.fallbackCopyToClipboard(answer);
+      }
 
       // Show success message
       const successMsg = document.getElementById(
         "copy-success",
       ) as HTMLDivElement;
-      (successMsg as HTMLElement).style.display = "block";
+      
+      if (successMsg) {
+        successMsg.style.display = "block";
+        setTimeout(() => {
+          successMsg.style.display = "none";
+        }, 2000);
+      }
 
-      setTimeout(() => {
-        (successMsg as HTMLElement).style.display = "none";
-      }, 2000);
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
-      alert("Failed to copy to clipboard. Please try again.");
+      
+      // Try fallback method on error
+      try {
+        this.fallbackCopyToClipboard(answer);
+        
+        // Show success message
+        const successMsg = document.getElementById(
+          "copy-success",
+        ) as HTMLDivElement;
+        if (successMsg) {
+          successMsg.style.display = "block";
+          setTimeout(() => {
+            successMsg.style.display = "none";
+          }, 2000);
+        }
+
+      } catch (fallbackError) {
+        console.error("Fallback copy also failed:", fallbackError);
+        
+        // Show answer text to user as last resort
+        const answerPreview = answer.length > 200 ? answer.substring(0, 200) + "..." : answer;
+        alert("Failed to copy to clipboard. Here's the answer:\n\n" + answerPreview);
+      }
     }
   }
 
-  public exportAnswer(): void {
-    const answerElement = document.getElementById(
-      "generated-answer",
-    ) as HTMLParagraphElement;
-    const answer = answerElement.textContent || "";
-    const template = (
-      document.getElementById("template-selector") as HTMLSelectElement
-    ).value;
-    const timestamp = new Date().toISOString().split("T")[0];
-
-    const content = `# Generated Answer\n\n**Template:** ${template}\n**Generated:** ${new Date().toLocaleString()}\n**Source Text:** ${this.popupState.selectedText}\n\n## Generated Answer:\n${answer}`;
-
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `answer-${template}-${timestamp}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+  private fallbackCopyToClipboard(text: string): void {
+    // Create a temporary textarea element
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    // Execute the copy command
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    
+    if (!successful) {
+      throw new Error('execCommand copy failed');
+    }
   }
 
   public testPopup(): void {
-    console.log("Answer Generation: Manual test popup called");
-
     // Simulate text selection
     const testPosition = { x: 200, y: 200 };
     this.popupState.selectedText =
       "This is test text for popup verification. Select any text to test the real functionality.";
 
-    console.log(
-      "Answer Generation: Showing test popup at position:",
-      testPosition,
-    );
     this.showInjectedPopup(this.popupState.selectedText, testPosition);
   }
 
   public debugPopup(): void {
-    console.log("Answer Generation: Debug popup state:", {
-      popupElement: this.popupElement,
-      popupState: this.popupState,
-      isInDOM: !!document.getElementById("answer-generation-popup"),
-      injectedPopup: !!document.getElementById("injected-answer-popup"),
-    });
+    // Debug popup state for troubleshooting
   }
 }
 
 // CRITICAL: Set up immediate global safety wrapper BEFORE anything else
-console.log("Answer Generation: IMMEDIATE wrapper setup starting...");
 
 // Set up immediate global safety wrapper - available before any onclick events
 (window as any).safeAnswerGenerationManager = {
   generateAnswer: () => {
-    console.log("Safe wrapper: generateAnswer called");
-    console.log("Safe wrapper: Manager available:", !!(window as any).answerGenerationManager);
     try {
       const manager = (window as any).answerGenerationManager;
       if (manager && typeof manager.generateAnswer === 'function') {
-        console.log("Safe wrapper: Calling manager.generateAnswer");
         return manager.generateAnswer();
       } else {
         console.error("Safe wrapper: Manager not ready yet, waiting...");
-        console.log("Safe wrapper: Manager type:", typeof manager);
-        console.log("Safe wrapper: Has generateAnswer?", manager && typeof manager.generateAnswer);
         // Wait a bit and retry
         setTimeout(() => {
           const retryManager = (window as any).answerGenerationManager;
-          console.log("Safe wrapper: Retry - Manager available:", !!(window as any).retryManager);
-          console.log("Safe wrapper: Retry - Manager type:", typeof retryManager);
-          console.log("Safe wrapper: Retry - Has generateAnswer?", retryManager && typeof retryManager.generateAnswer);
           if (retryManager && typeof retryManager.generateAnswer === 'function') {
-            console.log("Safe wrapper: Retrying manager.generateAnswer");
             return retryManager.generateAnswer();
           } else {
             console.error("Safe wrapper: Manager still not available after retry");
-            console.log("Safe wrapper: Available window properties:", Object.keys(window).filter(k => k.includes('answer')));
             if (typeof alert !== 'undefined') {
               alert("Answer Generation: Extension is loading, please try again in a moment.");
             }
@@ -1144,12 +1123,11 @@ console.log("Answer Generation: IMMEDIATE wrapper setup starting...");
     }
   },
   
-  copyAnswer: (format: string) => {
-    console.log(`Safe wrapper: copyAnswer(${format}) called`);
+  copyAnswer: () => {
     try {
       const manager = (window as any).answerGenerationManager;
       if (manager && typeof manager.copyAnswer === 'function') {
-        return manager.copyAnswer(format);
+        return manager.copyAnswer();
       } else {
         console.error("Safe wrapper: Manager not ready for copyAnswer");
         return Promise.resolve();
@@ -1158,33 +1136,12 @@ console.log("Answer Generation: IMMEDIATE wrapper setup starting...");
       console.error("Safe wrapper: Error in copyAnswer:", error);
       return Promise.resolve();
     }
-  },
-  
-  exportAnswer: () => {
-    console.log("Safe wrapper: exportAnswer called");
-    try {
-      const manager = (window as any).answerGenerationManager;
-      if (manager && typeof manager.exportAnswer === 'function') {
-        return manager.exportAnswer();
-      } else {
-        console.error("Safe wrapper: Manager not ready for exportAnswer");
-      }
-    } catch (error) {
-      console.error("Safe wrapper: Error in exportAnswer:", error);
-    }
   }
 };
-
-console.log("Answer Generation: IMMEDIATE wrapper setup complete");
-console.log("Answer Generation: Wrapper available:", typeof (window as any).safeAnswerGenerationManager);
-
 // Also provide a backup global for onclick handlers
 (window as any).AGWrapper = (window as any).safeAnswerGenerationManager;
 
-console.log("Answer Generation: Backup wrapper AGWrapper also set");
-
 // Main content script starts here
-console.log("Answer Generation: Creating AnswerGenerationManager instance");
 const answerGenerationManager = new AnswerGenerationManager();
 
 // Make manager globally accessible for popup onclick handlers
@@ -1192,21 +1149,10 @@ const answerGenerationManager = new AnswerGenerationManager();
 
 // Also expose individual methods as globals for direct onclick access
 (window as any).generateAnswer = () => answerGenerationManager.generateAnswer();
-(window as any).copyAnswer = (format: string) =>
-  answerGenerationManager.copyAnswer(format);
-(window as any).exportAnswer = () => answerGenerationManager.exportAnswer();
+(window as any).copyAnswer = () => answerGenerationManager.copyAnswer();
 
 // Make test methods globally available for debugging
 (window as any).testAnswerGenerationPopup = () =>
   answerGenerationManager.testPopup();
 (window as any).debugAnswerGenerationPopup = () =>
   answerGenerationManager.debugPopup();
-(window as any).manualTestGenerate = () => {
-  console.log("Manual test: Calling generateAnswer directly");
-  return answerGenerationManager.generateAnswer();
-};
-
-console.log("Answer Generation: Test methods available:");
-console.log("- window.testAnswerGenerationPopup() - Test popup manually");
-console.log("- window.debugAnswerGenerationPopup() - Debug popup state");
-console.log("- window.manualTestGenerate() - Test generateAnswer directly");
